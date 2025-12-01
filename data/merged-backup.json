@@ -1,0 +1,434 @@
+{
+  "generatedAt": "2025-12-01T17:02:53.350Z",
+  "sites": [
+    {
+      "id": "melon",
+      "name": "멜론",
+      "rows": [
+        {
+          "title": "멜론 테스트 공연 1",
+          "openAt": "2025-12-03T20:00",
+          "showAt": "2025-12-10T19:30",
+          "price": 50000
+        },
+        {
+          "title": "멜론 테스트 공연 2",
+          "openAt": "2025-12-05T20:00",
+          "showAt": "2025-12-21T18:00",
+          "price": 70000
+        }
+      ],
+      "meta": {
+        "url": "https://example-melon.com",
+        "count": 2
+      }
+    },
+    {
+      "id": "inter",
+      "name": "인터파크",
+      "rows": [
+        {
+          "title": "멜론 테스트 공연 1",
+          "openAt": "2025-12-03T20:00",
+          "showAt": "2025-12-10T19:30",
+          "price": 50000
+        },
+        {
+          "title": "멜론 테스트 공연 2",
+          "openAt": "2025-12-05T20:00",
+          "showAt": "2025-12-21T18:00",
+          "price": 70000
+        }
+      ],
+      "meta": {
+        "url": "https://example-interpark.com",
+        "count": 2
+      }
+    },
+    {
+      "id": "yes",
+      "name": "예스24",
+      "rows": [
+        {
+          "title": "멜론 테스트 공연 1",
+          "openAt": "2025-12-03T20:00",
+          "showAt": "2025-12-10T19:30",
+          "price": 50000
+        },
+        {
+          "title": "멜론 테스트 공연 2",
+          "openAt": "2025-12-05T20:00",
+          "showAt": "2025-12-21T18:00",
+          "price": 70000
+        }
+      ],
+      "meta": {
+        "url": "https://example-yes24.com",
+        "count": 2
+      }
+    },
+    {
+      "id": "link",
+      "name": "티켓링크 티켓오픈",
+      "rows": [
+        {
+          "source": "ticketlink",
+          "noticeId": 63533,
+          "categoryCode": "TICKET_OPEN",
+          "categoryName": "티켓오픈",
+          "title": "[단독판매] [안동] 2025 송년기획 동락 꿈의 선율 콘서트 티켓오픈 안내",
+          "openAt": "2025-12-02T11:00",
+          "showAt": "2025-12-02T11:00",
+          "openAtLabel": "2025.12.02(화) 11:00",
+          "registerAt": "2025-11-20T16:44",
+          "viewCount": 996,
+          "detailUrl": "https://www.ticketlink.co.kr/help/notice/63533"
+        },
+        {
+          "source": "ticketlink",
+          "noticeId": 63541,
+          "categoryCode": "TICKET_OPEN",
+          "categoryName": "티켓오픈",
+          "title": "2025-26 임재범 40주년콘서트 “나는 임재범이다” - 고양​​ 티켓오픈 안내",
+          "openAt": "2025-12-02T14:00",
+          "showAt": "2025-12-02T14:00",
+          "openAtLabel": "2025.12.02(화) 14:00",
+          "registerAt": "2025-11-24T10:08",
+          "viewCount": 441,
+          "detailUrl": "https://www.ticketlink.co.kr/help/notice/63541"
+        },
+        {
+          "source": "ticketlink",
+          "noticeId": 63568,
+          "categoryCode": "TICKET_OPEN",
+          "categoryName": "티켓오픈",
+          "title": "뮤지컬  5차​ 티켓오픈 안내",
+          "openAt": "2025-12-02T14:00",
+          "showAt": "2025-12-02T14:00",
+          "openAtLabel": "2025.12.02(화) 14:00",
+          "registerAt": "2025-11-26T11:19",
+          "viewCount": 1372,
+          "detailUrl": "https://www.ticketlink.co.kr/help/notice/63568"
+        },
+        {
+          "source": "ticketlink",
+          "noticeId": 63556,
+          "categoryCode": "TICKET_OPEN",
+          "categoryName": "티켓오픈",
+          "title": "[단독판매] [링크스페셜데이_Page 6] 뮤지컬 ​ 티켓오픈 안내",
+          "openAt": "2025-12-02T15:00",
+          "showAt": "2025-12-02T15:00",
+          "openAtLabel": "2025.12.02(화) 15:00",
+          "registerAt": "2025-11-25T11:08",
+          "viewCount": 1536,
+          "detailUrl": "https://www.ticketlink.co.kr/help/notice/63556"
+        },
+        {
+          "source": "ticketlink",
+          "noticeId": 63577,
+          "categoryCode": "TICKET_OPEN",
+          "categoryName": "티켓오픈",
+          "title": "​﻿DK UNIVERSE  - 광주​ 티켓오픈 안내",
+          "openAt": "2025-12-02T16:00",
+          "showAt": "2025-12-02T16:00",
+          "openAtLabel": "2025.12.02(화) 16:00",
+          "registerAt": "2025-11-27T14:10",
+          "viewCount": 669,
+          "detailUrl": "https://www.ticketlink.co.kr/help/notice/63577"
+        },
+        {
+          "source": "ticketlink",
+          "noticeId": 63565,
+          "categoryCode": "TICKET_OPEN",
+          "categoryName": "티켓오픈",
+          "title": "[단독판매] Stella Jang Christmas Concert Winterstella 2025  추가회차 티켓오픈 안내",
+          "openAt": "2025-12-02T20:00",
+          "showAt": "2025-12-02T20:00",
+          "openAtLabel": "2025.12.02(화) 20:00",
+          "registerAt": "2025-11-26T09:23",
+          "viewCount": 1346,
+          "detailUrl": "https://www.ticketlink.co.kr/help/notice/63565"
+        },
+        {
+          "source": "ticketlink",
+          "noticeId": 63581,
+          "categoryCode": "TICKET_OPEN",
+          "categoryName": "티켓오픈",
+          "title": "[단독판매] The Weekend listening coffee party 티켓오픈 안내",
+          "openAt": "2025-12-03T10:00",
+          "showAt": "2025-12-03T10:00",
+          "openAtLabel": "2025.12.03(수) 10:00",
+          "registerAt": "2025-11-28T11:48",
+          "viewCount": 492,
+          "detailUrl": "https://www.ticketlink.co.kr/help/notice/63581"
+        },
+        {
+          "source": "ticketlink",
+          "noticeId": 63586,
+          "categoryCode": "TICKET_OPEN",
+          "categoryName": "티켓오픈",
+          "title": "뮤지컬 최고다 호기심딱지 시즌3 -  경기광주 티켓오픈 안내",
+          "openAt": "2025-12-03T10:00",
+          "showAt": "2025-12-03T10:00",
+          "openAtLabel": "2025.12.03(수) 10:00",
+          "registerAt": "2025-11-28T17:11",
+          "viewCount": 61,
+          "detailUrl": "https://www.ticketlink.co.kr/help/notice/63586"
+        },
+        {
+          "source": "ticketlink",
+          "noticeId": 63595,
+          "categoryCode": "TICKET_OPEN",
+          "categoryName": "티켓오픈",
+          "title": "베베핀 뮤지컬  - 창원 티켓오픈 안내",
+          "openAt": "2025-12-03T10:00",
+          "showAt": "2025-12-03T10:00",
+          "openAtLabel": "2025.12.03(수) 10:00",
+          "registerAt": "2025-12-01T12:09",
+          "viewCount": 10,
+          "detailUrl": "https://www.ticketlink.co.kr/help/notice/63595"
+        },
+        {
+          "source": "ticketlink",
+          "noticeId": 63597,
+          "categoryCode": "TICKET_OPEN",
+          "categoryName": "티켓오픈",
+          "title": "가족뮤지컬  - 강릉​ 티켓오픈 안내",
+          "openAt": "2025-12-03T10:00",
+          "showAt": "2025-12-03T10:00",
+          "openAtLabel": "2025.12.03(수) 10:00",
+          "registerAt": "2025-12-01T12:12",
+          "viewCount": 25,
+          "detailUrl": "https://www.ticketlink.co.kr/help/notice/63597"
+        },
+        {
+          "source": "ticketlink",
+          "noticeId": 63566,
+          "categoryCode": "TICKET_OPEN",
+          "categoryName": "티켓오픈",
+          "title": "[인천] 뮤지컬 한글용사 아이야 새로운 이야기 티켓오픈 안내",
+          "openAt": "2025-12-03T11:00",
+          "showAt": "2025-12-03T11:00",
+          "openAtLabel": "2025.12.03(수) 11:00",
+          "registerAt": "2025-11-26T10:06",
+          "viewCount": 166,
+          "detailUrl": "https://www.ticketlink.co.kr/help/notice/63566"
+        },
+        {
+          "source": "ticketlink",
+          "noticeId": 63580,
+          "categoryCode": "TICKET_OPEN",
+          "categoryName": "티켓오픈",
+          "title": "[데뷔 60주년 기념공연] 2026 남진 전국투어 콘서트 - 진주 티켓오픈 안내",
+          "openAt": "2025-12-03T11:00",
+          "showAt": "2025-12-03T11:00",
+          "openAtLabel": "2025.12.03(수) 11:00",
+          "registerAt": "2025-11-28T11:16",
+          "viewCount": 260,
+          "detailUrl": "https://www.ticketlink.co.kr/help/notice/63580"
+        },
+        {
+          "source": "ticketlink",
+          "noticeId": 63575,
+          "categoryCode": "TICKET_OPEN",
+          "categoryName": "티켓오픈",
+          "title": "[단독판매]  ​2025 세븐나이츠 페스티벌​ 티켓오픈 안내",
+          "openAt": "2025-12-03T14:00",
+          "showAt": "2025-12-03T14:00",
+          "openAtLabel": "2025.12.03(수) 14:00",
+          "registerAt": "2025-11-26T17:38",
+          "viewCount": 683,
+          "detailUrl": "https://www.ticketlink.co.kr/help/notice/63575"
+        },
+        {
+          "source": "ticketlink",
+          "noticeId": 63584,
+          "categoryCode": "TICKET_OPEN",
+          "categoryName": "티켓오픈",
+          "title": "​2026 변진섭 전국투어 콘서트 변천사 시즌2.5 : 시간여행 - 수원​ 티켓오픈 안내",
+          "openAt": "2025-12-03T14:00",
+          "showAt": "2025-12-03T14:00",
+          "openAtLabel": "2025.12.03(수) 14:00",
+          "registerAt": "2025-11-28T15:25",
+          "viewCount": 157,
+          "detailUrl": "https://www.ticketlink.co.kr/help/notice/63584"
+        },
+        {
+          "source": "ticketlink",
+          "noticeId": 63596,
+          "categoryCode": "TICKET_OPEN",
+          "categoryName": "티켓오픈",
+          "title": "2025 뮤지컬 ​ 2차 티켓오픈 안내",
+          "openAt": "2025-12-03T15:00",
+          "showAt": "2025-12-03T15:00",
+          "openAtLabel": "2025.12.03(수) 15:00",
+          "registerAt": "2025-12-01T12:12",
+          "viewCount": 41,
+          "detailUrl": "https://www.ticketlink.co.kr/help/notice/63596"
+        },
+        {
+          "source": "ticketlink",
+          "noticeId": 63576,
+          "categoryCode": "TICKET_OPEN",
+          "categoryName": "티켓오픈",
+          "title": "[단독판매] [대전] 2025-26 박서진 전국투어 콘서트  티켓오픈 안내",
+          "openAt": "2025-12-03T20:00",
+          "showAt": "2025-12-03T20:00",
+          "openAtLabel": "2025.12.03(수) 20:00",
+          "registerAt": "2025-11-27T11:40",
+          "viewCount": 1931,
+          "detailUrl": "https://www.ticketlink.co.kr/help/notice/63576"
+        },
+        {
+          "source": "ticketlink",
+          "noticeId": 63588,
+          "categoryCode": "TICKET_OPEN",
+          "categoryName": "티켓오픈",
+          "title": "어린이 뮤지컬 캣 - 광명 티켓오픈 안내",
+          "openAt": "2025-12-04T09:00",
+          "showAt": "2025-12-04T09:00",
+          "openAtLabel": "2025.12.04(목) 09:00",
+          "registerAt": "2025-11-28T18:01",
+          "viewCount": 288,
+          "detailUrl": "https://www.ticketlink.co.kr/help/notice/63588"
+        },
+        {
+          "source": "ticketlink",
+          "noticeId": 63593,
+          "categoryCode": "TICKET_OPEN",
+          "categoryName": "티켓오픈",
+          "title": "어린이 뮤지컬  - 부천 티켓오픈 안내",
+          "openAt": "2025-12-04T09:00",
+          "showAt": "2025-12-04T09:00",
+          "openAtLabel": "2025.12.04(목) 09:00",
+          "registerAt": "2025-12-01T12:09",
+          "viewCount": 10,
+          "detailUrl": "https://www.ticketlink.co.kr/help/notice/63593"
+        },
+        {
+          "source": "ticketlink",
+          "noticeId": 63594,
+          "categoryCode": "TICKET_OPEN",
+          "categoryName": "티켓오픈",
+          "title": "어린이 뮤지컬  - 안산 티켓오픈 안내",
+          "openAt": "2025-12-04T09:00",
+          "showAt": "2025-12-04T09:00",
+          "openAtLabel": "2025.12.04(목) 09:00",
+          "registerAt": "2025-12-01T12:09",
+          "viewCount": 18,
+          "detailUrl": "https://www.ticketlink.co.kr/help/notice/63594"
+        },
+        {
+          "source": "ticketlink",
+          "noticeId": 63585,
+          "categoryCode": "TICKET_OPEN",
+          "categoryName": "티켓오픈",
+          "title": "​[안성] 가족뮤지컬 ​ 티켓오픈 안내",
+          "openAt": "2025-12-04T10:00",
+          "showAt": "2025-12-04T10:00",
+          "openAtLabel": "2025.12.04(목) 10:00",
+          "registerAt": "2025-11-28T15:45",
+          "viewCount": 8,
+          "detailUrl": "https://www.ticketlink.co.kr/help/notice/63585"
+        },
+        {
+          "source": "ticketlink",
+          "noticeId": 63591,
+          "categoryCode": "TICKET_OPEN",
+          "categoryName": "티켓오픈",
+          "title": "뮤지컬  - 진주 티켓오픈 안내",
+          "openAt": "2025-12-04T17:00",
+          "showAt": "2025-12-04T17:00",
+          "openAtLabel": "2025.12.04(목) 17:00",
+          "registerAt": "2025-12-01T10:16",
+          "viewCount": 71,
+          "detailUrl": "https://www.ticketlink.co.kr/help/notice/63591"
+        },
+        {
+          "source": "ticketlink",
+          "noticeId": 63519,
+          "categoryCode": "TICKET_OPEN",
+          "categoryName": "티켓오픈",
+          "title": "[단독판매] 2026 AHOF 1st FAN-CON  티켓오픈 안내",
+          "openAt": "2025-12-04T20:00",
+          "showAt": "2025-12-04T20:00",
+          "openAtLabel": "2025.12.04(목) 20:00",
+          "registerAt": "2025-11-19T11:02",
+          "viewCount": 37329,
+          "detailUrl": "https://www.ticketlink.co.kr/help/notice/63519"
+        },
+        {
+          "source": "ticketlink",
+          "noticeId": 63508,
+          "categoryCode": "TICKET_OPEN",
+          "categoryName": "티켓오픈",
+          "title": "[단독판매]  2025 송년음악회 - 칠곡군 티켓오픈 안내",
+          "openAt": "2025-12-05T09:00",
+          "showAt": "2025-12-05T09:00",
+          "openAtLabel": "2025.12.05(금) 09:00",
+          "registerAt": "2025-11-18T13:56",
+          "viewCount": 747,
+          "detailUrl": "https://www.ticketlink.co.kr/help/notice/63508"
+        },
+        {
+          "source": "ticketlink",
+          "noticeId": 63598,
+          "categoryCode": "TICKET_OPEN",
+          "categoryName": "티켓오픈",
+          "title": "[원주] 뮤지컬 번개맨 시즌2  티켓오픈 안내",
+          "openAt": "2025-12-05T11:00",
+          "showAt": "2025-12-05T11:00",
+          "openAtLabel": "2025.12.05(금) 11:00",
+          "registerAt": "2025-12-01T18:41",
+          "viewCount": 15,
+          "detailUrl": "https://www.ticketlink.co.kr/help/notice/63598"
+        },
+        {
+          "source": "ticketlink",
+          "noticeId": 63590,
+          "categoryCode": "TICKET_OPEN",
+          "categoryName": "티켓오픈",
+          "title": "뮤지컬 마지막 티켓오픈 안내",
+          "openAt": "2025-12-08T15:00",
+          "showAt": "2025-12-08T15:00",
+          "openAtLabel": "2025.12.08(월) 15:00",
+          "registerAt": "2025-12-01T09:35",
+          "viewCount": 42,
+          "detailUrl": "https://www.ticketlink.co.kr/help/notice/63590"
+        },
+        {
+          "source": "ticketlink",
+          "noticeId": 63538,
+          "categoryCode": "TICKET_OPEN",
+          "categoryName": "티켓오픈",
+          "title": "[단독판매]  조수미 크리스마스 콘서트 'My Secret Christmas' - 의성 티켓오픈 안내",
+          "openAt": "2025-12-11T14:00",
+          "showAt": "2025-12-11T14:00",
+          "openAtLabel": "2025.12.11(목) 14:00",
+          "registerAt": "2025-11-21T15:20",
+          "viewCount": 1390,
+          "detailUrl": "https://www.ticketlink.co.kr/help/notice/63538"
+        },
+        {
+          "source": "ticketlink",
+          "noticeId": 63592,
+          "categoryCode": "TICKET_OPEN",
+          "categoryName": "티켓오픈",
+          "title": "[단독판매] 연극  완도 티켓오픈 안내",
+          "openAt": "2025-12-24T13:00",
+          "showAt": "2025-12-24T13:00",
+          "openAtLabel": "2025.12.24(수) 13:00",
+          "registerAt": "2025-12-01T10:52",
+          "viewCount": 39,
+          "detailUrl": "https://www.ticketlink.co.kr/help/notice/63592"
+        }
+      ],
+      "meta": {
+        "url": "https://www.ticketlink.co.kr/help/notice#TICKET_OPEN",
+        "count": 27,
+        "pagesFetched": 2,
+        "sort": "OPEN_DATE"
+      }
+    }
+  ]
+}

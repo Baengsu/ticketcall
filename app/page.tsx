@@ -1,65 +1,100 @@
-import Image from "next/image";
+// app/page.tsx
 
-export default function Home() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+import { loadLiveData } from "@/lib/aggregate";
+import type { MergedData } from "@/lib/types";
+import CalendarClient from "@/components/calendar-client";
+
+export const dynamic = "force-dynamic";
+
+export type EventItem = {
+  id: string;
+  siteId: string;
+  siteName: string;
+  title: string;
+  openAt: string;       // 예매 오픈 시간 (YYYY-MM-DDTHH:mm)
+  viewCount?: number;   // 조회수 (있으면)
+};
+
+export default async function Page() {
+  const merged = await loadLiveData();
+
+  if (!merged) {
+    return (
+      <main className="min-h-screen flex items-center justify-center bg-background">
+        <p className="text-muted-foreground text-sm">
+          아직 저장된 데이터가 없습니다. 먼저 크롤링을 실행해서
+          <code className="mx-1">merged-live.json</code>을 생성해 주세요.
+        </p>
+      </main>
+    );
+  }
+
+  const events = buildEvents(merged);
+
+  if (events.length === 0) {
+    return (
+      <main className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center space-y-2">
+          <h1 className="text-xl font-semibold">예매 오픈 일정이 없습니다.</h1>
+          <p className="text-sm text-muted-foreground">
+            각 사이트의 row에{" "}
+            <code className="mx-1">title / openAt</code> 필드를
+            채워주면 달력에 표시됩니다.
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
       </main>
-    </div>
+    );
+  }
+
+  return (
+    <main className="min-h-screen bg-background">
+      <div className="container mx-auto py-10 space-y-6">
+        <header className="space-y-2">
+          <h1 className="text-2xl font-bold tracking-tight">
+            공연 예매 오픈 달력
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            각 사이트에서 수집한 예매 오픈 시간을 기준으로 월간 스케줄을
+            한눈에 볼 수 있습니다.
+          </p>
+        </header>
+
+        {/* 달력만 표시 */}
+        <section>
+          <CalendarClient events={events} />
+        </section>
+      </div>
+    </main>
   );
+}
+
+// --------- MergedData → EventItem 변환 로직 ---------
+
+function buildEvents(merged: MergedData): EventItem[] {
+  const events: EventItem[] = [];
+
+  for (const site of merged.sites) {
+    site.rows.forEach((row, index) => {
+      const title = String(row.title ?? "").trim();
+      const openAt = row.openAt as string | undefined;
+      const viewCount =
+        typeof row.viewCount === "number" ? (row.viewCount as number) : undefined;
+
+      // 예매 오픈 시간이 없으면 스킵
+      if (!title || !openAt) return;
+
+      events.push({
+        id: `${site.id}-${index}`,
+        siteId: site.id,
+        siteName: site.name,
+        title,
+        openAt,
+        viewCount,
+      });
+    });
+  }
+
+  // 예매 오픈 시간 기준 정렬
+  events.sort((a, b) => a.openAt.localeCompare(b.openAt));
+  return events;
 }
