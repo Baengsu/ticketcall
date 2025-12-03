@@ -9,65 +9,50 @@ const DATA_DIR = path.join(process.cwd(), "data");
 const YES_DEBUG_PATH = path.join(DATA_DIR, "yes-debug.json");
 
 // =======================
-//  YES24 티켓 공지사항 크롤러
+//  YES24 티켓 공지사항 크롤러 (axList POST)
 // =======================
 export async function crawlYes(): Promise<SiteDataset> {
   const rows: Array<Record<string, any>> = [];
   const seen = new Set<string>();
 
-  let page = 1;
-  const maxPages = 10; // 1~10 페이지까지 시도
+  const maxPages = 5; // 1~5 페이지만 (원하면 10으로 늘려도 됨)
+  let pagesFetched = 0;
 
   try {
-    while (page <= maxPages) {
-      // ✅ 실제 HAR 기준 POST form 데이터
-      const form = new URLSearchParams();
-      form.set("page", String(page));
-      form.set("size", "20");
-      form.set("genre", "");
-      form.set("province", "");
-      form.set("order", "");
-      form.set("searchType", "All");
-      form.set("searchText", "");
+    for (let page = 1; page <= maxPages; page++) {
+      const form = new URLSearchParams({
+        page: String(page),
+        size: "20",
+        genre: "",
+        province: "",
+        order: "",
+        searchType: "All",
+        searchText: "",
+      });
 
       const url = `${BASE}/New/Notice/Ajax/axList.aspx`;
-      console.log(
-        "[yes] fetch url (POST):",
-        url,
-        "body:",
-        form.toString(),
-      );
+      console.log("[yes] fetch POST:", url, "page=", page);
 
-      const pageResult: any = await fetchHtmlPost(url, form.toString());
-      const $: any = pageResult.$ ?? pageResult;
+      const { html, $ } = await fetchHtmlPost(url, form.toString());
+      console.log("[yes] html length:", html.length);
 
       if (!$ || typeof $ !== "function") {
         console.error("[yes] fetchHtmlPost 결과에 $ 가 없음, 중단");
         break;
       }
 
-      // 디버그용: 이 페이지에서 발견한 tr 개수
-      const tblCount = $(".noti-tbl").length;
-      const trCount = $(".noti-tbl tbody tr").length;
-      console.log(
-        `[yes] .noti-tbl 개수: ${tblCount}, tbody tr 개수: ${trCount}`,
-      );
-
       const added = collectPageRows($, rows, seen, page);
-      console.log(
-        `[yes] page ${page} 에서 파싱된 row 수: ${added}, 누적: ${rows.length}`,
-      );
+      console.log(`[yes] page ${page} 에서 파싱된 row 수:`, added);
 
-      // 이 페이지에서 새로 추가된 게 하나도 없으면 더 이상 진행 X
       if (added === 0) {
         break;
       }
 
-      page += 1;
+      pagesFetched = page;
     }
   } catch (err) {
     console.error("[yes] crawlYes 실패:", err);
-    // 절대 throw 하지 말기! aggregate.ts 가 같이 터지지 않게
+    // 여기서는 throw 안 함. aggregate 쪽에서 전체가 죽지 않도록.
   }
 
   return {
@@ -75,10 +60,10 @@ export async function crawlYes(): Promise<SiteDataset> {
     name: "YES24 티켓오픈",
     rows,
     meta: {
-      url: `${BASE}/New/Notice/NoticeMain.aspx`,
+      url: `${BASE}/New/Notice/NoticeMain.aspx?Gcode=009_208_002`,
       count: rows.length,
-      pagesFetched: page - 1,
-      sort: "등록순(기본)",
+      pagesFetched,
+      sort: "등록순(기본)", // 서버 기준 기본 정렬
     },
   };
 }
@@ -95,12 +80,13 @@ function collectPageRows(
   let added = 0;
 
   const $table = $(".noti-tbl table").first();
-  if (!$table.length) {
+  if (!$table || $table.length === 0) {
     console.log("[yes] collectPageRows: .noti-tbl table 을 찾지 못함");
     return 0;
   }
 
   const $trs = $table.find("tbody > tr");
+  console.log("[yes] .noti-tbl tbody tr 개수:", $trs.length);
 
   $trs.each((_idx: number, tr: any) => {
     const $tr = $(tr);
@@ -143,14 +129,14 @@ function collectPageRows(
       id,
       category,
       title,
-      openAt, // "YYYY-MM-DDTHH:mm"
-      showAt, // 지금은 openAt과 동일
-      openAtLabel, // "2025.12.04(목) 10:00"
+      openAt,        // "YYYY-MM-DDTHH:mm"
+      showAt,        // 지금은 openAt과 동일
+      openAtLabel,   // "2025.12.04(목) 10:00"
       viewCount,
       detailUrl: id
         ? `${BASE}/New/Notice/NoticeMain.aspx?#id=${id}`
         : "",
-      page, // 몇 페이지에서 가져왔는지 기록
+      page,          // 몇 페이지에서 가져왔는지 기록
     });
 
     added += 1;
@@ -163,7 +149,7 @@ function collectPageRows(
 function cleanTitle(t: string): string {
   if (!t) return "";
   let s = t;
-  s = s.replace(/\s+/g, " "); // 여러 공백 → 한 칸
+  s = s.replace(/\s+/g, " ");        // 여러 공백 → 한 칸
   s = s.replace(/\[단독판매\]/g, ""); // 필요시 다른 태그도 여기서 제거
   return s.trim();
 }
