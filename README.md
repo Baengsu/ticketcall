@@ -1,4 +1,4 @@
-## ticketcall 사이트 개발기 (웹사이트 개발 도전)
+## ticketlounge 사이트 개발기 (웹사이트 개발 도전)
 ### 2025-12-01
     - Next.js(TypeScript) 사용예정
     - Tailwind + shadcn UI
@@ -26,3 +26,4 @@
     - 인터파크 크롤링 확장 구현 완료
     - 인터파크 데이터 파이프 라인 구현 완료
     - 멜론티켓 구현 완료
+    - ticketlounge 홈페이지명 변경
