@@ -1,6 +1,14 @@
 // lib/types.ts
 
-export type SiteId = "melon" | "inter" | "yes" | "link";
+// lib/types.ts (혹은 SiteId 정의돼 있는 곳)
+
+export type SiteId =
+  | "melon"
+  | "inter"
+  | "yes"
+  | "link"
+  | "etc"; // 👈 이 줄 추가
+
 
 export interface SiteDataset {
   id: SiteId;

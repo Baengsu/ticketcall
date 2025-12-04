@@ -1,5 +1,4 @@
 // app/page.tsx
-
 import { loadLiveData } from "@/lib/aggregate";
 import type { MergedData } from "@/lib/types";
 import CalendarClient from "@/components/calendar-client";
@@ -11,8 +10,8 @@ export type EventItem = {
   siteId: string;
   siteName: string;
   title: string;
-  openAt: string;       // 예매 오픈 시간 (YYYY-MM-DDTHH:mm)
-  viewCount?: number;   // 조회수 (있으면)
+  openAt: string; // 예매 오픈 시간 (YYYY-MM-DDTHH:mm)
+  viewCount?: number;
 };
 
 export default async function Page() {
@@ -38,8 +37,8 @@ export default async function Page() {
           <h1 className="text-xl font-semibold">예매 오픈 일정이 없습니다.</h1>
           <p className="text-sm text-muted-foreground">
             각 사이트의 row에{" "}
-            <code className="mx-1">title / openAt</code> 필드를
-            채워주면 달력에 표시됩니다.
+            <code className="mx-1">title / openAt</code> 필드를 채워주면 달력에
+            표시됩니다.
           </p>
         </div>
       </main>
@@ -50,16 +49,13 @@ export default async function Page() {
     <main className="min-h-screen bg-background">
       <div className="container mx-auto py-10 space-y-6">
         <header className="space-y-2">
-          <h1 className="text-2xl font-bold tracking-tight">
-            공연 예매 오픈 달력
-          </h1>
+          <h1 className="text-2xl font-bold tracking-tight">공연 예매 오픈 달력</h1>
           <p className="text-sm text-muted-foreground">
-            각 사이트에서 수집한 예매 오픈 시간을 기준으로 월간 스케줄을
-            한눈에 볼 수 있습니다.
+            각 사이트에서 수집한 예매 오픈 시간을 기준으로 월간 스케줄을 한눈에
+            볼 수 있습니다.
           </p>
         </header>
 
-        {/* 달력만 표시 */}
         <section>
           <CalendarClient events={events} />
         </section>
@@ -67,8 +63,6 @@ export default async function Page() {
     </main>
   );
 }
-
-// --------- MergedData → EventItem 변환 로직 ---------
 
 function buildEvents(merged: MergedData): EventItem[] {
   const events: EventItem[] = [];
@@ -78,9 +72,10 @@ function buildEvents(merged: MergedData): EventItem[] {
       const title = String(row.title ?? "").trim();
       const openAt = row.openAt as string | undefined;
       const viewCount =
-        typeof row.viewCount === "number" ? (row.viewCount as number) : undefined;
+        typeof row.viewCount === "number"
+          ? (row.viewCount as number)
+          : undefined;
 
-      // 예매 오픈 시간이 없으면 스킵
       if (!title || !openAt) return;
 
       events.push({
@@ -94,7 +89,6 @@ function buildEvents(merged: MergedData): EventItem[] {
     });
   }
 
-  // 예매 오픈 시간 기준 정렬
   events.sort((a, b) => a.openAt.localeCompare(b.openAt));
   return events;
 }
