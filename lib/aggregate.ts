@@ -12,7 +12,7 @@ const DATA_DIR = path.join(process.cwd(), "data");
 const BACKUP_PATH = path.join(DATA_DIR, "merged-backup.json");
 const LIVE_PATH = path.join(DATA_DIR, "merged-live.json");
 
-// 1) 4개 사이트 크롤링 + 이전 스냅샷과 병합
+// 1) 4개 사이트 크롤링 + "기타" 수동 입력용 사이트 추가 + 이전 스냅샷과 병합
 export async function buildMergedData(): Promise<MergedData> {
   // 새로 크롤링한 데이터
   const [melon, inter, yes, link] = await Promise.all([
@@ -22,9 +22,21 @@ export async function buildMergedData(): Promise<MergedData> {
     crawlLink(),
   ]);
 
+  // 수동 입력용 "기타" 사이트 (크롤링 X, 빈 rows로 시작)
+  const manualEtc: SiteDataset = {
+    id: "etc",
+    name: "기타(수동 입력)",
+    rows: [],
+    meta: {
+      description:
+        "크롤링되지 않는 수동 추가용 섹션입니다. merged-live.json에서 직접 수정하세요.",
+    },
+  };
+
   const fresh: MergedData = {
     generatedAt: new Date().toISOString(),
-    sites: [melon, inter, yes, link],
+    // 기존 4개 + 수동 기타
+    sites: [melon, inter, yes, link, manualEtc],
   };
 
   // 기존 live 데이터 불러오기 (없으면 null)
@@ -162,13 +174,10 @@ function mergeSite(
       // 같은 제목이 이미 존재
       const prevRow = mergedRows[prevIdx];
 
-      // 🔥 요구사항: 조회수만 최신값으로 업데이트
+      // 🔥 조회수만 최신값으로 업데이트
       if (typeof freshRow.viewCount === "number") {
         (prevRow as any).viewCount = freshRow.viewCount;
       }
-
-      // 다른 필드(openAt, openAtLabel 등)는
-      // "예전 스냅샷 유지" 정책에 따라 그대로 둔다.
     }
   }
 

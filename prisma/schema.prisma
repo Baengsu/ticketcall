@@ -1,15 +1,14 @@
+// prisma/schema.prisma
 datasource db {
   provider = "mysql"
-  url      = env("DATABASE_URL")  // ✅ Prisma 6에서는 이 줄 써도 됨
+  url      = env("DATABASE_URL")
 }
 
 generator client {
   provider = "prisma-client-js"
 }
 
-/**
- * NextAuth + 커스텀 유저용 기본 스키마 (MySQL)
- */
+/* -------------------- Auth (NextAuth + 커스텀) -------------------- */
 
 model User {
   id            String   @id @default(cuid())
@@ -17,11 +16,13 @@ model User {
   email         String?  @unique
   emailVerified DateTime?
   image         String?
-  passwordHash  String?  // 자체 회원가입용 비밀번호 해시
+  passwordHash  String?    // 자체 회원가입용 비밀번호 해시
   role          String   @default("user")
 
   accounts Account[]
   sessions Session[]
+  posts    Post[]
+  comments Comment[]
 }
 
 model Account {
@@ -58,4 +59,43 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+/* -------------------- 게시판 관련 모델 -------------------- */
+
+model BoardCategory {
+  id        Int      @id @default(autoincrement())
+  slug      String   @unique    // "notice", "suggest" 이런 식
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  posts     Post[]
+}
+
+model Post {
+  id         Int      @id @default(autoincrement())
+  title      String
+  content    String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  categoryId Int
+  authorId   String
+
+  category   BoardCategory @relation(fields: [categoryId], references: [id])
+  author     User          @relation(fields: [authorId], references: [id])
+  comments   Comment[]
+}
+
+model Comment {
+  id        Int      @id @default(autoincrement())
+  content   String
+  createdAt DateTime @default(now())
+
+  postId   Int
+  authorId String
+
+  post     Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author   User @relation(fields: [authorId], references: [id], onDelete: Cascade)
 }

@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TicketCall",
+  title: "TicketForum",
   description: "공연 예매 오픈 캘린더 & 커뮤니티",
 };
 
