@@ -1,3 +1,4 @@
+// C:\ticketcall\app\api\rebuild\route.ts
 // app/api/rebuild/route.ts
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
@@ -15,8 +16,10 @@ async function handleRebuild(req: Request) {
     );
   }
 
+  const userEmail = session.user.email;
+
   const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
+    where: { email: userEmail },
   });
 
   if (!user || user.role !== "admin") {
@@ -31,16 +34,45 @@ async function handleRebuild(req: Request) {
     const merged = await buildMergedData();
     await saveMergedData(merged);
 
+    // 🔥 성공 로그 기록
+    const siteCount = merged.sites?.length ?? 0;
+    const generatedAt = merged.generatedAt ?? null;
+
+    const message = `리빌드 성공 - 사이트 ${siteCount}개 병합${
+      generatedAt ? ` (generatedAt: ${generatedAt})` : ""
+    }`;
+
+    await prisma.rebuildLog.create({
+      data: {
+        status: "success",
+        message,
+        userEmail,
+      },
+    });
+
     return NextResponse.json(
       {
         ok: true,
-        generatedAt: merged.generatedAt,
-        siteCount: merged.sites.length,
+        generatedAt,
+        siteCount,
       },
       { status: 200 }
     );
-  } catch (e) {
+  } catch (e: any) {
     console.error("rebuild error", e);
+
+    // 🔥 실패 로그 기록
+    const errorMessage =
+      e?.message ?? "리빌드 중 알 수 없는 오류가 발생했습니다.";
+
+    await prisma.rebuildLog.create({
+      data: {
+        status: "error",
+        message: errorMessage,
+        userEmail,
+      },
+    });
+
     return NextResponse.json(
       { ok: false, message: "리빌드 중 오류가 발생했습니다." },
       { status: 500 }

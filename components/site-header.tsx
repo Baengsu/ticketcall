@@ -1,103 +1,142 @@
-// components/site-header.tsx
+// C:\ticketcall\components\site-header.tsx
 "use client";
 
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { useState } from "react";
 
-export default function SiteHeader() {
-  const { data: session } = useSession();
-  const [loading, setLoading] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
+function NavLink({
+  href,
+  label,
+}: {
+  href: string;
+  label: string;
+}) {
+  const pathname = usePathname();
+  const active =
+    pathname === href || pathname?.startsWith(href + "/");
 
-  const role = (session?.user as any)?.role ?? "user";
+  return (
+    <Link
+      href={href}
+      className={
+        "text-sm px-3 py-2 rounded-md transition " +
+        (active
+          ? "bg-black text-white"
+          : "text-muted-foreground hover:bg-muted")
+      }
+    >
+      {label}
+    </Link>
+  );
+}
+
+export default function SiteHeader() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [rebuilding, setRebuilding] = useState(false);
+
+  const user = session?.user as any | undefined;
+  const email = user?.email as string | undefined;
+  const role = user?.role as string | undefined;
   const isAdmin = role === "admin";
 
-  const handleRebuild = async () => {
-    setLoading(true);
-    setMsg(null);
+  async function handleRebuild() {
     try {
+      setRebuilding(true);
       const res = await fetch("/api/rebuild", {
         method: "POST",
       });
-      const data = await res.json();
-
-      if (!res.ok || !data.ok) {
-        setMsg(data.message ?? "리빌드 실패");
+      if (!res.ok) {
+        alert("리빌드 실패");
       } else {
-        setMsg(`리빌드 완료 (${data.generatedAt})`);
+        alert("리빌드 완료!");
+        router.refresh();
       }
-    } catch (err) {
-      console.error(err);
-      setMsg("서버 오류");
+    } catch (e) {
+      console.error(e);
+      alert("리빌드 중 오류 발생");
     } finally {
-      setLoading(false);
+      setRebuilding(false);
     }
-  };
+  }
 
   return (
     <header className="border-b bg-background">
-      <div className="container mx-auto flex items-center justify-between h-14 px-4">
-        {/* 왼쪽: 로고 + 메뉴 */}
-        <div className="flex items-center gap-4">
-          <Link href="/" className="font-semibold">
-            티켓포럼
+      <div className="container mx-auto h-14 flex items-center justify-between gap-4">
+        {/* 왼쪽: 로고 */}
+        <div className="flex items-center gap-3">
+          <Link href="/" className="font-semibold text-sm">
+            TicketCall
           </Link>
-          <nav className="flex gap-3 text-sm text-muted-foreground">
-            <Link href="/board/notice">공지사항</Link>
-            <Link href="/board/free">건의사항</Link>
+
+          {/* 메인 네비게이션 */}
+          <nav className="flex items-center gap-1">
+            <NavLink href="/" label="달력" />
+            <NavLink href="/board/notice" label="공지사항" />
+            <NavLink href="/board/free" label="건의사항" />
+
+            {session && (
+              <NavLink href="/mypage" label="마이페이지" />
+            )}
+
+            {/* 🔥 관리자 전용 메뉴: admin 계정일 때만 보임 */}
+            {isAdmin && (
+              <NavLink href="/admin" label="관리자" />
+            )}
           </nav>
         </div>
 
-        {/* 오른쪽: 관리자 버튼 + 로그인/로그아웃 */}
+        {/* 오른쪽: 로그인 / 사용자 정보 / 관리자 도구 */}
         <div className="flex items-center gap-3 text-xs">
-          {/* 관리자 전용 리빌드 버튼 */}
-          {isAdmin && (
-            <button
-              onClick={handleRebuild}
-              disabled={loading}
-              className="px-3 py-1 rounded-md border text-xs"
-            >
-              {loading ? "리빌드 중..." : "크롤링 리빌드"}
-            </button>
-          )}
-
-          {/* 리빌드 결과 메시지 */}
-          {msg && (
-            <span className="text-[10px] text-muted-foreground max-w-[200px] truncate">
-              {msg}
+          {status === "loading" ? (
+            <span className="text-muted-foreground">
+              세션 확인 중...
             </span>
-          )}
-
-          {session ? (
+          ) : session ? (
             <>
-              {/* 로그인 중일 때: 이메일 + role 표시 */}
-              <span className="text-muted-foreground">
-                {(session.user as any).email} ({role})
-              </span>
-              {/* 로그아웃 버튼 */}
+              <div className="flex flex-col items-end leading-tight">
+                <span className="font-medium">
+                  {email ?? "로그인됨"}
+                </span>
+                <span className="text-[11px] text-muted-foreground">
+                  {isAdmin ? "관리자" : "일반 사용자"}
+                </span>
+              </div>
+
+              {/* 🔧 크롤링 리빌드 버튼도 계속 관리자 전용 */}
+              {isAdmin && (
+                <button
+                  onClick={handleRebuild}
+                  disabled={rebuilding}
+                  className="px-2 py-1 rounded-md bg-amber-500 text-white text-[11px] disabled:opacity-60"
+                >
+                  {rebuilding ? "리빌드 중..." : "크롤링 리빌드"}
+                </button>
+              )}
+
               <button
                 onClick={() => signOut({ callbackUrl: "/" })}
-                className="px-3 py-1 rounded-md border text-xs"
+                className="px-2 py-1 rounded-md border text-[11px]"
               >
                 로그아웃
               </button>
             </>
           ) : (
             <>
-              {/* 비로그인 상태일 때: 로그인 / 회원가입 */}
-              <Link
-                href="/auth/login"
-                className="text-muted-foreground hover:underline"
+              <button
+                onClick={() => router.push("/auth/login")}
+                className="px-2 py-1 rounded-md border text-[11px]"
               >
                 로그인
-              </Link>
-              <Link
-                href="/auth/register"
-                className="text-muted-foreground hover:underline"
+              </button>
+              <button
+                onClick={() => router.push("/auth/register")}
+                className="px-2 py-1 rounded-md bg-black text-white text-[11px]"
               >
                 회원가입
-              </Link>
+              </button>
             </>
           )}
         </div>

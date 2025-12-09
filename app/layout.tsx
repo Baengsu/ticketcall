@@ -1,9 +1,11 @@
+// C:\ticketcall\app\layout.tsx
 // app/layout.tsx
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import AuthProvider from "@/components/auth-provider";
 import SiteHeader from "@/components/site-header";
+import OnlineTracker from "@/components/online-tracker";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,6 +33,8 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >
         <AuthProvider>
+          {/* 🔥 모든 페이지에서 접속 상태를 서버에 주기적으로 알림 */}
+          <OnlineTracker />
           <SiteHeader />
           {/* 페이지들이 이 안에 렌더링됨 */}
           {children}

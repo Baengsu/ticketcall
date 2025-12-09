@@ -83,6 +83,9 @@ model Post {
   categoryId Int
   authorId   String
 
+  // 🔥 새로 추가: 공지 고정 여부
+  isPinned   Boolean  @default(false)
+
   category   BoardCategory @relation(fields: [categoryId], references: [id])
   author     User          @relation(fields: [authorId], references: [id])
   comments   Comment[]
@@ -98,4 +101,12 @@ model Comment {
 
   post     Post @relation(fields: [postId], references: [id], onDelete: Cascade)
   author   User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+}
+
+model RebuildLog {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  status    String   // "success" | "error" 같은 값
+  message   String   // 요약 메시지 (예: "YES 120건, Melon 98건 통합 완료")
+  userEmail String?  // 누가 눌렀는지 (관리자 이메일)
 }

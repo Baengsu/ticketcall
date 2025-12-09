@@ -1,11 +1,16 @@
 // app/board/[slug]/[postID]/page.tsx
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import CommentsClient, {
+  CommentItem,
+} from "@/components/board/comments-client";
 
 const NOTICE_SLUG = "notice";
-const SUGGEST_SLUG = "suggest";
+// 🔥 건의사항 slug: /board/free 기준
+const SUGGEST_SLUG = "free";
+const DONE_PREFIX = "[완료] ";
 
 interface PageProps {
   params: Promise<{
@@ -15,14 +20,12 @@ interface PageProps {
 }
 
 export default async function PostDetailPage({ params }: PageProps) {
-  // ✅ Next 16: params는 Promise라서 await 필요
   const { slug, postID } = await params;
 
   if (!slug || !postID) {
     notFound();
   }
 
-  // 1) 게시판(카테고리) 찾기
   const category = await prisma.boardCategory.findUnique({
     where: { slug },
   });
@@ -31,13 +34,11 @@ export default async function PostDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  // 2) postID → 숫자로 변환
   const postIdNum = Number(postID);
   if (!Number.isFinite(postIdNum)) {
     notFound();
   }
 
-  // 3) 글 + 작성자 + 댓글까지 같이 조회
   const post = await prisma.post.findUnique({
     where: { id: postIdNum },
     include: {
@@ -46,6 +47,7 @@ export default async function PostDetailPage({ params }: PageProps) {
         orderBy: { createdAt: "asc" },
         include: { author: true },
       },
+      category: true,
     },
   });
 
@@ -53,7 +55,6 @@ export default async function PostDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  // 4) 로그인/권한 정보
   const session = await getServerSession(authOptions);
   const currentUser = session?.user as any | undefined;
   const currentUserId = currentUser?.id as string | undefined;
@@ -64,101 +65,124 @@ export default async function PostDetailPage({ params }: PageProps) {
   const isNotice = slug === NOTICE_SLUG;
   const isSuggest = slug === SUGGEST_SLUG;
 
-  // ✅ 건의사항: 작성자 + 관리자만 본문 열람 가능
-  const canViewContent = !isSuggest || isAdmin || isAuthor;
+  // 🔥 건의사항: 작성자 + 관리자만 페이지 접근 가능
+  if (isSuggest && !isAdmin && !isAuthor) {
+    notFound();
+  }
+
+  const initialComments: CommentItem[] = post.comments.map((c) => ({
+    id: c.id,
+    content: c.content,
+    createdAt: c.createdAt.toISOString(),
+    authorId: c.authorId,
+    author: c.author
+      ? {
+          id: c.author.id,
+          name: c.author.name,
+        }
+      : null,
+  }));
+
+  const isDone = post.title.startsWith(DONE_PREFIX);
+  const displayTitle = post.title;
 
   return (
     <main className="container mx-auto py-10 space-y-6">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-bold tracking-tight">{post.title}</h1>
-        <div className="text-xs text-muted-foreground flex gap-2">
-          <span>게시판: {category.name}</span>
-          <span>작성자: {post.author?.name ?? "익명"}</span>
-          <span>{post.createdAt.toISOString().slice(0, 16).replace("T", " ")}</span>
+      <header className="space-y-1 flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">
+            {displayTitle}
+          </h1>
+          <div className="text-xs text-muted-foreground flex gap-3 flex-wrap">
+            <span>게시판: {category.name}</span>
+            <span>작성자: {post.author?.name ?? "익명"}</span>
+            <span>
+              {post.createdAt.toISOString().slice(0, 16).replace("T", " ")}
+            </span>
+          </div>
+        </div>
+
+        <div className="flex gap-2">
+          {/* 🔥 관리자 전용: 완료 표시 버튼 (건의사항일 때만) */}
+          {isSuggest && isAdmin && !isDone && (
+            <form
+              action={async () => {
+                "use server";
+
+                await prisma.post.update({
+                  where: { id: post.id },
+                  data: {
+                    title: post.title.startsWith(DONE_PREFIX)
+                      ? post.title
+                      : DONE_PREFIX + post.title,
+                  },
+                });
+
+                redirect(`/board/${slug}/${postID}`);
+              }}
+            >
+              <button
+                type="submit"
+                className="text-sm px-3 py-1 rounded bg-green-600 text-white"
+              >
+                완료 처리
+              </button>
+            </form>
+          )}
+
+          {/* 수정/삭제 버튼: 작성자 + 관리자 */}
+          {(isAdmin || isAuthor) && (
+            <>
+              <form action={`/board/${slug}/${postID}/edit`}>
+                <button
+                  type="submit"
+                  className="text-sm px-3 py-1 rounded bg-blue-600 text-white"
+                >
+                  수정
+                </button>
+              </form>
+
+              <form
+                action={async () => {
+                  "use server";
+
+                  await prisma.post.delete({
+                    where: { id: post.id },
+                  });
+
+                  redirect(`/board/${slug}`);
+                }}
+              >
+                <button
+                  type="submit"
+                  className="text-sm px-3 py-1 rounded bg-red-600 text-white"
+                >
+                  삭제
+                </button>
+              </form>
+            </>
+          )}
         </div>
       </header>
 
-      {/* 건의사항 권한 체크 */}
-      {isSuggest && !canViewContent ? (
-        <section className="border rounded-md p-4 bg-muted/40">
-          <p className="text-sm text-muted-foreground">
-            이 글의 내용은 작성자와 관리자만 열람할 수 있습니다.
-          </p>
-        </section>
-      ) : (
-        <section className="border rounded-md p-4 whitespace-pre-wrap text-sm leading-relaxed">
-          {post.content}
-        </section>
-      )}
+      {/* 본문 */}
+      <section className="border rounded-md p-4 whitespace-pre-wrap text-sm leading-relaxed">
+        {post.content}
+      </section>
 
-      {/* 댓글 영역 */}
-      {isNotice ? (
-        <section className="border-t pt-4 text-sm text-muted-foreground">
-          공지사항에는 댓글을 달 수 없습니다.
-        </section>
-      ) : (
-        <section className="space-y-4 border-t pt-4">
-          <h2 className="text-sm font-semibold">댓글</h2>
+      {/* 댓글 섹션 */}
+      <section className="space-y-4 border-top pt-4">
+        <h2 className="text-sm font-semibold">댓글</h2>
 
-          {/* 댓글 목록 */}
-          {post.comments.length === 0 ? (
-            <p className="text-xs text-muted-foreground">아직 댓글이 없습니다.</p>
-          ) : (
-            <ul className="space-y-2">
-              {post.comments.map((comment) => (
-                <li
-                  key={comment.id}
-                  className="border rounded-md px-3 py-2 text-sm space-y-1"
-                >
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>{comment.author?.name ?? "익명"}</span>
-                    <span>
-                      {comment.createdAt.toISOString().slice(0, 16).replace("T", " ")}
-                    </span>
-                  </div>
-                  <p className="whitespace-pre-wrap">{comment.content}</p>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          {/* 댓글 작성 폼 – 로그인 한 유저만 */}
-          {currentUserId ? (
-            <form
-              action={async (formData) => {
-                "use server";
-                const content = formData.get("content");
-                if (typeof content !== "string" || !content.trim()) return;
-
-                await prisma.comment.create({
-                  data: {
-                    content: content.trim(),
-                    postId: post.id,
-                    authorId: currentUserId,
-                  },
-                });
-              }}
-              className="space-y-2"
-            >
-              <textarea
-                name="content"
-                className="w-full border rounded px-2 py-1 text-sm min-h-[80px]"
-                placeholder="댓글을 입력하세요."
-              />
-              <button
-                type="submit"
-                className="px-3 py-1 rounded-md bg-primary text-primary-foreground text-xs"
-              >
-                댓글 등록
-              </button>
-            </form>
-          ) : (
-            <p className="text-xs text-muted-foreground">
-              댓글을 작성하려면 로그인 해 주세요.
-            </p>
-          )}
-        </section>
-      )}
+        <CommentsClient
+          postId={post.id}
+          slug={slug}
+          isNotice={isNotice}
+          currentUserId={currentUserId}
+          currentUserRole={currentUserRole}
+          initialComments={initialComments}
+        />
+      </section>
     </main>
   );
 }

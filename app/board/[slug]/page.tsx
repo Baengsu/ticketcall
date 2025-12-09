@@ -1,28 +1,42 @@
 // app/board/[slug]/page.tsx
-import prisma from "@/lib/prisma";
-import Link from "next/link";
 import { notFound } from "next/navigation";
+import prisma from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import type { Prisma } from "@prisma/client";
 
-const NOTICE_SLUG = "notice";   // 공지사항
-const SUGGEST_SLUG = "suggest"; // 건의사항 (예전 free)
+const NOTICE_SLUG = "notice";
+// 🔥 건의사항 slug: /board/free 기준
+const SUGGEST_SLUG = "free";
 
-type PageProps = {
-  // ✅ Next 16: params 가 Promise 로 들어온다
+// 건의사항 제목 마스킹용
+function maskTitle(title: string): string {
+  if (!title) return "";
+  const len = Math.min(title.length, 10);
+  return "*".repeat(Math.max(3, len));
+}
+
+interface PageProps {
   params: Promise<{
     slug: string;
   }>;
-};
+}
+
+// ✅ Post + author + _count.comments 타입 명시
+type PostWithMeta = Prisma.PostGetPayload<{
+  include: {
+    author: true;
+    _count: {
+      select: {
+        comments: true;
+      };
+    };
+  };
+}>;
 
 export default async function BoardPage({ params }: PageProps) {
-  // ✅ Promise 풀어서 slug 꺼내기
   const { slug } = await params;
 
-  // slug 없으면 바로 404
-  if (!slug) {
-    notFound();
-  }
-
-  // 1. 슬러그로 카테고리 찾기
   const category = await prisma.boardCategory.findUnique({
     where: { slug },
   });
@@ -31,74 +45,119 @@ export default async function BoardPage({ params }: PageProps) {
     notFound();
   }
 
-  // 2. 해당 카테고리의 글 목록 조회
-  const posts = await prisma.post.findMany({
-    where: { categoryId: category.id },
-    orderBy: { createdAt: "desc" },
-    include: {
-      author: true,
-    },
-  });
+  const session = await getServerSession(authOptions);
+  const currentUser = session?.user as any | undefined;
+  const currentUserId = currentUser?.id as string | undefined;
+  const currentUserRole = currentUser?.role as string | undefined;
+  const isAdmin = currentUserRole === "admin";
 
   const isNotice = slug === NOTICE_SLUG;
   const isSuggest = slug === SUGGEST_SLUG;
 
+  // 🔥 글쓰기 권한:
+  // - 공지: admin만
+  // - 건의/나머지: 로그인 유저면 OK
+  const canWrite = isNotice ? isAdmin : !!currentUserId;
+
+  const posts: PostWithMeta[] = await prisma.post.findMany({
+    where: { categoryId: category.id },
+    orderBy: { createdAt: "desc" },
+    include: {
+      author: true,
+      _count: {
+        select: {
+          comments: true, // ✅ 올바른 Prisma 6 문법
+        },
+      },
+    },
+  });
+
   return (
     <main className="container mx-auto py-10 space-y-6">
-      <header className="flex items-center justify-between">
+      <header className="flex justify-between items-center">
         <div className="space-y-1">
           <h1 className="text-2xl font-bold tracking-tight">
             {category.name}
           </h1>
-          {isNotice && (
-            <p className="text-sm text-muted-foreground">
-              공지사항 게시판입니다. 관리자만 글을 작성할 수 있고, 댓글은 닫혀 있습니다.
-            </p>
-          )}
-          {isSuggest && (
-            <p className="text-sm text-muted-foreground">
-              건의사항 게시판입니다. 회원은 자유롭게 건의글을 작성할 수 있고, 
-              제목은 모두에게 공개되지만 내용은 작성자와 관리자만 볼 수 있습니다.
-            </p>
-          )}
+          <p className="text-sm text-muted-foreground">
+            {isNotice
+              ? "사이트 공지사항을 모아둔 게시판입니다."
+              : isSuggest
+              ? "건의사항은 작성자와 관리자만 상세 내용을 볼 수 있습니다. 제목은 다른 유저에게 마스킹됩니다."
+              : "게시판 목록입니다."}
+          </p>
         </div>
 
-        {/* 글쓰기 버튼: slug 에 따라 권한 체크는 서버에서 한 번 더 함 */}
-        <Link
-          href={`/board/${slug}/new`}
-          className="text-sm px-3 py-1 rounded-md bg-primary text-primary-foreground"
-        >
-          글쓰기
-        </Link>
+        {canWrite && (
+          <a
+            href={`/board/${slug}/new`}
+            className="px-4 py-2 text-sm rounded-md bg-black text-white"
+          >
+            글쓰기
+          </a>
+        )}
       </header>
 
       {posts.length === 0 ? (
         <p className="text-sm text-muted-foreground">아직 글이 없습니다.</p>
       ) : (
-        <ul className="space-y-3">
-          {posts.map((post) => (
-            <li
-              key={post.id}
-              className="border rounded-md px-4 py-3 flex flex-col gap-1"
-            >
-              <div className="flex justify-between items-center">
-                <Link
-                  href={`/board/${slug}/${post.id}`}
-                  className="font-medium hover:underline"
-                >
-                  {post.title}
-                </Link>
-                <span className="text-xs text-muted-foreground">
-                  {post.createdAt.toISOString().slice(0, 10)}
-                </span>
-              </div>
-              <div className="flex justify-between items-center text-xs text-muted-foreground">
-                <span>{post.author?.name ?? "익명"}</span>
-                <span>글번호 #{post.id}</span>
-              </div>
-            </li>
-          ))}
-        </ul>
+        <div className="border rounded-md overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-muted">
+              <tr>
+                {/* 🔥 글번호(#) 제거됨 */}
+                <th className="px-3 py-2 text-left">제목</th>
+                <th className="px-3 py-2 text-left w-32">작성자</th>
+                <th className="px-3 py-2 text-left w-32">작성일</th>
+              </tr>
+            </thead>
+            <tbody>
+              {posts.map((post) => {
+                const isAuthor = currentUserId === post.authorId;
+
+                const rawTitle = post.title;
+                const commentCount = post._count.comments;
+
+                const DONE_PREFIX = "[완료] ";
+                let displayTitle = rawTitle;
+
+                if (isSuggest && !isAdmin && !isAuthor) {
+                  if (rawTitle.startsWith(DONE_PREFIX)) {
+                    displayTitle =
+                      DONE_PREFIX +
+                      maskTitle(rawTitle.slice(DONE_PREFIX.length));
+                  } else {
+                    displayTitle = maskTitle(rawTitle);
+                  }
+                }
+
+                const titleWithCount =
+                  commentCount > 0
+                    ? `${displayTitle} (${commentCount})`
+                    : displayTitle;
+
+                return (
+                  <tr key={post.id} className="border-t">
+                    <td className="px-3 py-2">
+                      <a
+                        href={`/board/${slug}/${post.id}`}
+                        className="hover:underline"
+                      >
+                        {titleWithCount}
+                      </a>
+                    </td>
+                    <td className="px-3 py-2">
+                      {post.author?.name ?? "익명"}
+                    </td>
+                    <td className="px-3 py-2 text-xs text-muted-foreground">
+                      {post.createdAt.toISOString().slice(0, 10)}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
     </main>
   );
