@@ -11,12 +11,26 @@ type RebuildLog = {
   userEmail: string | null;
 };
 
+type PostSummary = {
+  id: number;
+  title: string;
+  createdAt: string;
+  categoryName: string;
+  categorySlug: string;
+  isPinned: boolean;
+  isHidden: boolean;
+};
+
 export default function AdminPage() {
   const [onlineCount, setOnlineCount] = useState<number | null>(null);
   const [loadingOnline, setLoadingOnline] = useState(true);
 
   const [logs, setLogs] = useState<RebuildLog[]>([]);
   const [loadingLogs, setLoadingLogs] = useState(true);
+
+  const [pinnedNotices, setPinnedNotices] = useState<PostSummary[]>([]);
+  const [hiddenPosts, setHiddenPosts] = useState<PostSummary[]>([]);
+  const [loadingPostsSummary, setLoadingPostsSummary] = useState(true);
 
   // 실시간 접속자 수
   useEffect(() => {
@@ -60,12 +74,34 @@ export default function AdminPage() {
     fetchLogs();
   }, []);
 
+  // 🔥 게시글 요약(고정 공지 + 숨김 글) 조회
+  useEffect(() => {
+    const fetchPostsSummary = async () => {
+      try {
+        const res = await fetch("/api/admin/posts-summary");
+        if (!res.ok) {
+          console.error("Failed to fetch posts summary");
+          return;
+        }
+        const data = await res.json();
+        setPinnedNotices(data.pinnedNotices ?? []);
+        setHiddenPosts(data.hiddenPosts ?? []);
+      } catch (error) {
+        console.error("Error fetching posts summary", error);
+      } finally {
+        setLoadingPostsSummary(false);
+      }
+    };
+
+    fetchPostsSummary();
+  }, []);
+
   return (
     <main className="p-6 space-y-6 max-w-5xl mx-auto">
       <header>
         <h1 className="text-2xl font-bold mb-1">Admin Dashboard</h1>
         <p className="text-sm text-muted-foreground">
-          TicketCall 운영을 위한 관리자 전용 페이지입니다.
+          TicketForum 운영을 위한 관리자 전용 페이지입니다.
         </p>
       </header>
 
@@ -122,6 +158,60 @@ export default function AdminPage() {
         </div>
       </section>
 
+      {/* 🔥 고정 공지 & 숨김 글 요약 카드 */}
+      <section className="grid gap-4 md:grid-cols-2">
+        <div className="border rounded-lg p-4">
+          <h2 className="text-lg font-semibold mb-2">고정 공지 현황</h2>
+          {loadingPostsSummary ? (
+            <p>불러오는 중...</p>
+          ) : pinnedNotices.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              상단 고정된 공지가 없습니다.
+            </p>
+          ) : (
+            <ul className="space-y-1 text-sm">
+              {pinnedNotices.slice(0, 5).map((post) => (
+                <li key={post.id} className="flex justify-between gap-2">
+                  <div className="flex-1">
+                    <div className="font-medium truncate">
+                      [{post.categoryName}] {post.title}
+                    </div>
+                    <div className="text-[11px] text-muted-foreground">
+                      {new Date(post.createdAt).toLocaleString("ko-KR")}
+                    </div>
+                  </div>
+                  <a
+                    href={`/board/${post.categorySlug}/${post.id}`}
+                    className="text-[11px] px-2 py-1 rounded border hover:bg-muted whitespace-nowrap"
+                  >
+                    이동
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div className="border rounded-lg p-4">
+          <h2 className="text-lg font-semibold mb-2">숨김 처리된 게시글</h2>
+          {loadingPostsSummary ? (
+            <p>불러오는 중...</p>
+          ) : hiddenPosts.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              숨김 처리된 게시글이 없습니다.
+            </p>
+          ) : (
+            <p className="text-sm">
+              총{" "}
+              <span className="font-semibold">
+                {hiddenPosts.length} 개
+              </span>{" "}
+             의 게시글이 숨김 처리되어 있습니다.
+            </p>
+          )}
+        </div>
+      </section>
+
       {/* 리빌드 로그 테이블 */}
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">크롤링 리빌드 로그</h2>
@@ -166,6 +256,81 @@ export default function AdminPage() {
                     <td className="px-3 py-2 align-top">{log.message}</td>
                     <td className="px-3 py-2 align-top">
                       {log.userEmail ?? "-"}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <a
+  href="/admin/users"
+  className="text-sm px-3 py-2 rounded-md border hover:bg-muted inline-block"
+>
+  회원 관리로 이동
+</a>
+
+<a
+  href="/admin/etc-events"
+  className="text-xs px-3 py-2 rounded-md border hover:bg-muted inline-block"
+>
+  직접 공연 일정 관리
+</a>
+
+
+      {/* 🔥 숨김 처리된 게시글 상세 목록 */}
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold">숨김 처리된 게시글 목록</h2>
+        <div className="border rounded-lg overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-muted">
+              <tr>
+                <th className="px-3 py-2 text-left">게시판</th>
+                <th className="px-3 py-2 text-left">제목</th>
+                <th className="px-3 py-2 text-left w-40">작성일</th>
+                <th className="px-3 py-2 text-left w-20">보기</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loadingPostsSummary ? (
+                <tr>
+                  <td
+                    colSpan={4}
+                    className="px-3 py-4 text-center text-muted-foreground"
+                  >
+                    불러오는 중...
+                  </td>
+                </tr>
+              ) : hiddenPosts.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={4}
+                    className="px-3 py-4 text-center text-muted-foreground"
+                  >
+                    숨김 처리된 게시글이 없습니다.
+                  </td>
+                </tr>
+              ) : (
+                hiddenPosts.map((post) => (
+                  <tr key={post.id} className="border-t">
+                    <td className="px-3 py-2 align-top whitespace-nowrap">
+                      {post.categoryName}
+                    </td>
+                    <td className="px-3 py-2 align-top">
+                      <div className="line-clamp-2">{post.title}</div>
+                    </td>
+                    <td className="px-3 py-2 align-top text-xs text-muted-foreground">
+                      {new Date(post.createdAt).toLocaleString("ko-KR")}
+                    </td>
+                    <td className="px-3 py-2 align-top">
+                      <a
+                        href={`/board/${post.categorySlug}/${post.id}`}
+                        className="text-[11px] px-2 py-1 rounded border hover:bg-muted inline-block"
+                      >
+                        이동
+                      </a>
                     </td>
                   </tr>
                 ))

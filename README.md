@@ -58,3 +58,182 @@
     - 건의사항 마스킹 구현
     - 관리자 페이지 리빌딩 세션 로그 구현
     - 공지사항 고정 만들기
+    - ticketforum 1.1.2 업데이트
+
+### 2025-12-10
+    - 고정 공지 현황
+    - 숨김 처리된 게시글 개수
+    - 관리자 페이지 테이블 구성
+    - 건의사항에 관리자 공식 답변
+    - 게시글 신고 시스템
+    - 건의 처리 / 답변 알림 + 헤더 뱃지
+    - 건의사항에 관리자 답변 섹션
+    - 캘린더 프런트 변경 / 파피콘 추가 / 10,000 이상 핫 추가
+    - 아이디 계정 정지
+    - 관리자 페이지에서 유저계정 상세 분석 툴
+
+# 숙제
+    - 공연 일정 관심 표시 / 찜하기
+    - 공연 알림 레벨 태그
+    - 게시판 검색 / 필터
+    - 관리자에서 유저 목록 / 권한 변경
+    - 관리자에서 크롤링 상태 모니터링(사이트별)
+    - 신고 시스템
+    - 알림 & 배지 느낌 기능
+    - 오늘 / 이번주 예매 오픈 알림 블럭
+    - 필터 가능한 캘린더
+    - 예매 링크 바로가기 / 복수 링크 우선순위
+    - 다크 모드 토글 (유저별 저장 가능)
+    - 내 활동 간단 통계
+```
+ticketcall
+├─ app
+│  ├─ admin
+│  │  ├─ etc-events
+│  │  │  └─ page.tsx
+│  │  ├─ page.tsx
+│  │  ├─ reports
+│  │  │  └─ page.tsx
+│  │  └─ users
+│  │     ├─ page.tsx
+│  │     └─ [userId]
+│  │        └─ page.tsx
+│  ├─ api
+│  │  ├─ admin
+│  │  │  ├─ posts-summary
+│  │  │  │  └─ route.ts
+│  │  │  └─ rebuild-logs
+│  │  │     └─ route.ts
+│  │  ├─ auth
+│  │  │  ├─ register
+│  │  │  │  └─ route.ts
+│  │  │  └─ [...nextauth]
+│  │  │     └─ route.ts
+│  │  ├─ board
+│  │  │  ├─ comment
+│  │  │  │  └─ route.ts
+│  │  │  ├─ pin
+│  │  │  │  └─ route.ts
+│  │  │  ├─ post
+│  │  │  │  └─ route.ts
+│  │  │  └─ [slug]
+│  │  │     └─ posts
+│  │  │        └─ route.ts
+│  │  ├─ debug
+│  │  │  └─ yes
+│  │  │     └─ route.ts
+│  │  ├─ debug-events
+│  │  │  └─ route.ts
+│  │  ├─ notifications
+│  │  │  └─ unread-count
+│  │  │     └─ route.ts
+│  │  ├─ online-count
+│  │  │  └─ route.ts
+│  │  ├─ ping
+│  │  │  └─ route.ts
+│  │  └─ rebuild
+│  │     └─ route.ts
+│  ├─ auth
+│  │  ├─ login
+│  │  │  └─ page.tsx
+│  │  └─ register
+│  │     └─ page.tsx
+│  ├─ board
+│  │  └─ [slug]
+│  │     ├─ new
+│  │     │  └─ page.tsx
+│  │     ├─ page.tsx
+│  │     └─ [postID]
+│  │        ├─ comment
+│  │        │  └─ [commentID]
+│  │        │     └─ edit
+│  │        │        └─ page.tsx
+│  │        ├─ edit
+│  │        │  └─ page.tsx
+│  │        └─ page.tsx
+│  ├─ favicon.ico
+│  ├─ globals.css
+│  ├─ layout.tsx
+│  ├─ mypage
+│  │  └─ page.tsx
+│  ├─ page.tsx
+│  └─ performance
+│     └─ [Id]
+│        └─ page.tsx
+├─ components
+│  ├─ auth-provider.tsx
+│  ├─ board
+│  │  ├─ comment-section.tsx
+│  │  ├─ comments-client.tsx
+│  │  └─ new-post-form.tsx
+│  ├─ calendar-client.tsx
+│  ├─ online-tracker.tsx
+│  ├─ site-header.tsx
+│  └─ ui
+│     ├─ button.tsx
+│     ├─ card.tsx
+│     ├─ input.tsx
+│     ├─ popover.tsx
+│     ├─ table.tsx
+│     └─ tabs.tsx
+├─ components.json
+├─ data
+│  ├─ merged-backup.json
+│  ├─ merged-live.json
+│  ├─ yes-debug.json
+│  └─ yes-raw.html
+├─ eslint.config.mjs
+├─ lib
+│  ├─ aggregate.ts
+│  ├─ auth.ts
+│  ├─ baseCrawler.ts
+│  ├─ events.ts
+│  ├─ inter.ts
+│  ├─ link.ts
+│  ├─ melon.ts
+│  ├─ prisma.ts
+│  ├─ redis.ts
+│  ├─ types.ts
+│  ├─ utils.ts
+│  └─ yes.ts
+├─ middleware.ts
+├─ next.config.ts
+├─ package-lock.json
+├─ package.json
+├─ postcss.config.mjs
+├─ prisma
+│  ├─ migrations
+│  │  ├─ 20251205135358_init_board_models
+│  │  │  └─ migration.sql
+│  │  ├─ 20251205135938_init_board_with_comments
+│  │  │  └─ migration.sql
+│  │  ├─ 20251209121255_add_rebuild_log
+│  │  │  └─ migration.sql
+│  │  ├─ 20251209122519_add_post_is_pinned
+│  │  │  └─ migration.sql
+│  │  ├─ 20251209123624_add_post_is_hidden
+│  │  │  └─ migration.sql
+│  │  ├─ 20251209125553_add_admin_reply_report_notification
+│  │  │  └─ migration.sql
+│  │  ├─ 20251210104752_add_etc_event
+│  │  │  └─ migration.sql
+│  │  ├─ 20251210112005_name_add_user_ban
+│  │  │  └─ migration.sql
+│  │  └─ migration_lock.toml
+│  └─ schema.prisma
+├─ prisma.config.bak
+├─ projecttree.md
+├─ public
+│  ├─ file.svg
+│  ├─ globe.svg
+│  ├─ inter.ico
+│  ├─ link.ico
+│  ├─ melon.ico
+│  ├─ next.svg
+│  ├─ vercel.svg
+│  ├─ window.svg
+│  └─ yes.ico
+├─ README.md
+└─ tsconfig.json
+
+```

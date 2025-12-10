@@ -59,14 +59,24 @@ export default async function BoardPage({ params }: PageProps) {
   // - 건의/나머지: 로그인 유저면 OK
   const canWrite = isNotice ? isAdmin : !!currentUserId;
 
+  // 🔥 숨김 필터:
+  // - 관리자: 숨긴 글까지 모두 조회
+  // - 일반 유저: isHidden = false 인 글만 조회
+  const whereCondition: Prisma.PostWhereInput = {
+    categoryId: category.id,
+    ...(isAdmin ? {} : { isHidden: false }),
+  };
+
   const posts: PostWithMeta[] = await prisma.post.findMany({
-    where: { categoryId: category.id },
-    orderBy: { createdAt: "desc" },
+    where: whereCondition,
+    orderBy: isNotice
+      ? [{ isPinned: "desc" }, { createdAt: "desc" }]
+      : { createdAt: "desc" },
     include: {
       author: true,
       _count: {
         select: {
-          comments: true, // ✅ 올바른 Prisma 6 문법
+          comments: true,
         },
       },
     },
@@ -81,7 +91,7 @@ export default async function BoardPage({ params }: PageProps) {
           </h1>
           <p className="text-sm text-muted-foreground">
             {isNotice
-              ? "사이트 공지사항을 모아둔 게시판입니다."
+              ? "사이트 공지사항을 모아둔 게시판입니다. 상단 고정된 공지가 먼저 표시됩니다."
               : isSuggest
               ? "건의사항은 작성자와 관리자만 상세 내용을 볼 수 있습니다. 제목은 다른 유저에게 마스킹됩니다."
               : "게시판 목록입니다."}
@@ -105,7 +115,6 @@ export default async function BoardPage({ params }: PageProps) {
           <table className="w-full text-sm">
             <thead className="bg-muted">
               <tr>
-                {/* 🔥 글번호(#) 제거됨 */}
                 <th className="px-3 py-2 text-left">제목</th>
                 <th className="px-3 py-2 text-left w-32">작성자</th>
                 <th className="px-3 py-2 text-left w-32">작성일</th>
@@ -121,6 +130,7 @@ export default async function BoardPage({ params }: PageProps) {
                 const DONE_PREFIX = "[완료] ";
                 let displayTitle = rawTitle;
 
+                // 🔥 건의사항 제목 마스킹 로직
                 if (isSuggest && !isAdmin && !isAuthor) {
                   if (rawTitle.startsWith(DONE_PREFIX)) {
                     displayTitle =
@@ -129,6 +139,16 @@ export default async function BoardPage({ params }: PageProps) {
                   } else {
                     displayTitle = maskTitle(rawTitle);
                   }
+                }
+
+                // 🔥 공지 게시판에서 상단 고정된 글이면 [공지] 표시
+                if (isNotice && (post as any).isPinned) {
+                  displayTitle = `[공지] ${displayTitle}`;
+                }
+
+                // 🔥 관리자에게는 숨김 글에 [숨김] 표시
+                if (isAdmin && (post as any).isHidden) {
+                  displayTitle = `[숨김] ${displayTitle}`;
                 }
 
                 const titleWithCount =

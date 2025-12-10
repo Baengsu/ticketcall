@@ -225,44 +225,121 @@ function truncate(str: string, max: number): string {
   return str.slice(0, max - 1) + "…";
 }
 
+function getSiteIcon(siteId: string): string | null {
+  switch (siteId) {
+    case "yes":
+      return "/yes.ico";
+    case "melon":
+      return "/melon.ico";
+    case "inter":
+      return "/inter.ico";
+    case "link":
+      return "/link.ico";
+    case "etc":
+      return "/etc.ico"; // 있으면 사용, 없으면 만들어도 좋고
+    default:
+      return null;
+  }
+}
+
 // ---- 팝오버(스티커) ----
 
 function EventPopover({ ev }: { ev: EventItem }) {
   const shortTitle = truncate(ev.title, 24);
   const hasView = typeof ev.viewCount === "number";
+  const isHot = hasView && (ev.viewCount ?? 0) >= 10000;
+  const iconSrc = getSiteIcon(ev.siteId);
 
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <button className="block w-full text-left text-[11px] rounded px-1 py-0.5 bg-primary/10 hover:bg-primary/20">
-          <div className="flex items-center justify-between gap-1">
-            <span className="truncate">{shortTitle}</span>
-            {hasView && (
-              <span className="flex-shrink-0 text-[10px] text-muted-foreground">
-                {ev.viewCount}
-              </span>
-            )}
-          </div>
-        </button>
-      </PopoverTrigger>
+  <button
+    className={
+      "block w-full text-left text-[11px] rounded px-1 py-0.5 " +
+      (isHot
+        ? "bg-pink-200 hover:bg-pink-300"
+        : "bg-primary/10 hover:bg-primary/20")
+    }
+  >
+    <div className="flex items-center justify-between gap-1">
+      {/* 왼쪽: 아이콘 + 제목 */}
+      <div className="flex items-center gap-1 min-w-0">
+        {iconSrc && (
+          <img
+            src={iconSrc}
+            alt={ev.siteId}
+            className="w-3 h-3 flex-shrink-0"
+          />
+        )}
+        <span
+  className={
+    "truncate " + (isHot ? "font-semibold" : "")
+  }
+>
+  {shortTitle}
+</span>
+
+      </div>
+
+      {/* 오른쪽: 조회수 */}
+      {hasView && (
+        <span className="flex-shrink-0 text-[10px] text-muted-foreground">
+          {ev.viewCount}
+        </span>
+      )}
+    </div>
+  </button>
+</PopoverTrigger>
+
+
+
       <PopoverContent
         side="bottom"
         align="start"
         className="w-64 p-3 text-xs space-y-1"
       >
-        <div className="text-[11px] uppercase text-muted-foreground">
-          {ev.siteName}
+        <div className="flex items-center gap-2 text-[11px] uppercase text-muted-foreground">
+    {iconSrc && (
+      <img
+        src={iconSrc}
+        alt={ev.siteId}
+        className="w-4 h-4 flex-shrink-0"
+      />
+    )}
+    <span>{ev.siteName}</span>
         </div>
         <div className="font-semibold">{ev.title}</div>
         <div className="text-[11px] text-muted-foreground">
           예매 오픈: {formatDateTimeLabel(ev.openAt)}
         </div>
         {hasView && (
-          <div className="text-[11px] text-muted-foreground">
-            조회수: {ev.viewCount}회
+  <div
+    className={
+      "text-[11px] " +
+      (isHot ? "text-red-600 font-semibold" : "text-muted-foreground")
+    }
+  >
+    조회수: {ev.viewCount}회
+    {isHot && <span className="ml-1 text-[10px]">· HOT</span>}
+  </div>
+)}
+
+
+        {/* 🔥 예매 / 상세 페이지 바로가기 버튼 */}
+        {ev.detailUrl && (
+          <div className="pt-2">
+            <a
+              href={ev.detailUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex px-3 py-1 rounded-md bg-black text-white text-[11px]"
+            >
+              예매 / 상세 페이지 이동
+            </a>
           </div>
         )}
       </PopoverContent>
     </Popover>
   );
 }
+

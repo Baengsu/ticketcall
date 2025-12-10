@@ -10,11 +10,21 @@ export default function LoginPage() {
   const searchParams = useSearchParams();
   const registered = searchParams.get("registered");
 
+  // 🔥 URL 쿼리로 넘어온 에러 코드 (?error=AccountDisabled 등)
+  const errorCode = searchParams.get("error");
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // 🔥 초기 에러 메시지: URL에 AccountDisabled가 있으면 바로 세팅
+  const [errorMsg, setErrorMsg] = useState<string | null>(() => {
+    if (errorCode === "AccountDisabled") {
+      return "이 계정은 관리자에 의해 정지되었습니다. 자세한 문의는 관리자에게 연락해 주세요.";
+    }
+    return null;
+  });
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -34,7 +44,15 @@ export default function LoginPage() {
       });
 
       if (res?.error) {
-        setErrorMsg("이메일 또는 비밀번호가 올바르지 않습니다.");
+        // 🔥 정지된 계정인 경우 별도 메시지
+        if (res.error === "AccountDisabled") {
+          setErrorMsg(
+            "이 계정은 관리자에 의해 정지되었습니다. 자세한 문의는 관리자에게 연락해 주세요."
+          );
+        } else {
+          // 그 외에는 기존처럼 자격 증명 오류
+          setErrorMsg("이메일 또는 비밀번호가 올바르지 않습니다.");
+        }
         return;
       }
 

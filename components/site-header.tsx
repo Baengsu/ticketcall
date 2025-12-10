@@ -1,10 +1,11 @@
 // C:\ticketcall\components\site-header.tsx
+// components/site-header.tsx
 "use client";
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 function NavLink({
   href,
@@ -42,6 +43,48 @@ export default function SiteHeader() {
   const role = user?.role as string | undefined;
   const isAdmin = role === "admin";
 
+   // 🔥 정지된 계정은 자동 로그아웃
+  useEffect(() => {
+    if (user && user.isDisabled) {
+      // 정지된 계정이면 강제로 로그아웃 + 에러 코드 전달
+      signOut({ callbackUrl: "/auth/login?error=AccountDisabled" });
+    }
+  }, [user]); 
+
+  // 🔔 안 읽은 알림 개수
+  const [unreadCount, setUnreadCount] = useState<number>(0);
+
+  useEffect(() => {
+    if (!session) {
+      setUnreadCount(0);
+      return;
+    }
+
+    let cancelled = false;
+
+    const fetchUnread = async () => {
+      try {
+        const res = await fetch("/api/notifications/unread-count");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled) {
+          setUnreadCount(data.count ?? 0);
+        }
+      } catch (e) {
+        console.error("Failed to fetch unread notifications", e);
+      }
+    };
+
+    fetchUnread();
+
+    // 30초마다 한 번씩 갱신
+    const interval = setInterval(fetchUnread, 30000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [session]);
+
   async function handleRebuild() {
     try {
       setRebuilding(true);
@@ -68,7 +111,7 @@ export default function SiteHeader() {
         {/* 왼쪽: 로고 */}
         <div className="flex items-center gap-3">
           <Link href="/" className="font-semibold text-sm">
-            TicketCall
+            TicketForum
           </Link>
 
           {/* 메인 네비게이션 */}
@@ -76,12 +119,16 @@ export default function SiteHeader() {
             <NavLink href="/" label="달력" />
             <NavLink href="/board/notice" label="공지사항" />
             <NavLink href="/board/free" label="건의사항" />
-
             {session && (
-              <NavLink href="/mypage" label="마이페이지" />
+              <NavLink
+                href="/mypage"
+                label={
+                  unreadCount > 0
+                    ? `마이페이지 (${unreadCount})`
+                    : "마이페이지"
+                }
+              />
             )}
-
-            {/* 🔥 관리자 전용 메뉴: admin 계정일 때만 보임 */}
             {isAdmin && (
               <NavLink href="/admin" label="관리자" />
             )}
@@ -102,10 +149,14 @@ export default function SiteHeader() {
                 </span>
                 <span className="text-[11px] text-muted-foreground">
                   {isAdmin ? "관리자" : "일반 사용자"}
+                  {unreadCount > 0 && (
+                    <span className="ml-1 text-[11px] text-blue-600">
+                      · 새 알림 {unreadCount}개
+                    </span>
+                  )}
                 </span>
               </div>
 
-              {/* 🔧 크롤링 리빌드 버튼도 계속 관리자 전용 */}
               {isAdmin && (
                 <button
                   onClick={handleRebuild}

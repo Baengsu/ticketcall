@@ -19,10 +19,17 @@ model User {
   passwordHash  String?    // 자체 회원가입용 비밀번호 해시
   role          String   @default("user")
 
+  isDisabled Boolean  @default(false)  // 계정 정지 여부
+  bannedAt   DateTime?
+  banReason  String?
+
   accounts Account[]
   sessions Session[]
   posts    Post[]
   comments Comment[]
+  reports       Report[]
+  notifications Notification[]
+  etcEvents EtcEvent[]
 }
 
 model Account {
@@ -83,12 +90,18 @@ model Post {
   categoryId Int
   authorId   String
 
-  // 🔥 새로 추가: 공지 고정 여부
   isPinned   Boolean  @default(false)
+  isHidden   Boolean  @default(false)
+
+  // 🔥 관리자 공식 답변
+  adminReply     String?
+  adminRepliedAt DateTime?
 
   category   BoardCategory @relation(fields: [categoryId], references: [id])
   author     User          @relation(fields: [authorId], references: [id])
   comments   Comment[]
+
+  reports    Report[]
 }
 
 model Comment {
@@ -109,4 +122,45 @@ model RebuildLog {
   status    String   // "success" | "error" 같은 값
   message   String   // 요약 메시지 (예: "YES 120건, Melon 98건 통합 완료")
   userEmail String?  // 누가 눌렀는지 (관리자 이메일)
+}
+
+model Report {
+  id         String   @id @default(cuid())
+  createdAt  DateTime @default(now())
+  status     String   @default("pending") // "pending" | "resolved" | "ignored"
+  reason     String?
+
+  targetType String   // "post" (나중에 "comment"도 추가 가능)
+  postId     Int?
+
+  reporterId String?
+  reporter   User?    @relation(fields: [reporterId], references: [id])
+
+  post       Post?    @relation(fields: [postId], references: [id])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  userId    String
+  type      String     // "suggest_done" | "admin_reply" 등
+  message   String
+  read      Boolean   @default(false)
+
+  user      User      @relation(fields: [userId], references: [id])
+}
+
+model EtcEvent {
+  id        Int      @id @default(autoincrement())
+  userId    String
+  title     String
+  datetime  DateTime
+  place     String?
+  url       String?
+  memo      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
 }

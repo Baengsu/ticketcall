@@ -2,6 +2,8 @@
 import { loadLiveData } from "@/lib/aggregate";
 import type { MergedData } from "@/lib/types";
 import CalendarClient from "@/components/calendar-client";
+import prisma from "@/lib/prisma";
+
 
 export const dynamic = "force-dynamic";
 
@@ -12,24 +14,36 @@ export type EventItem = {
   title: string;
   openAt: string; // 예매 오픈 시간 (YYYY-MM-DDTHH:mm)
   viewCount?: number;
+  detailUrl?: string;
 };
 
 export default async function Page() {
-  const merged = await loadLiveData();
+  // 🔥 크롤링 데이터 + 직접 추가 일정(DB) 동시에 로드
+  const [merged, etcEventsRaw] = await Promise.all([
+    loadLiveData(),
+    prisma.etcEvent.findMany({
+      orderBy: { datetime: "asc" },
+    }),
+  ]);
 
-  if (!merged) {
-    return (
-      <main className="min-h-screen flex items-center justify-center bg-background">
-        <p className="text-muted-foreground text-sm">
-          아직 저장된 데이터가 없습니다. 먼저 크롤링을 실행해서
-          <code className="mx-1">merged-live.json</code>을 생성해 주세요.
-        </p>
-      </main>
-    );
-  }
+  // 1) 크롤링 공연들 (merged-live.json 기반)
+  const crawlerEvents = merged ? buildEvents(merged) : [];
 
-  const events = buildEvents(merged);
+  // 2) 관리자 직접 등록 공연들 (EtcEvent → EventItem)
+  const etcEvents: EventItem[] = etcEventsRaw.map((e) => ({
+  id: `etc-${e.id}`,
+  siteId: "etc",
+  siteName: "직접 추가",
+  title: e.title,
+  openAt: e.datetime.toISOString(), // 캘린더에서는 openAt 기준으로 사용
+  viewCount: undefined,
+  detailUrl: e.url ?? undefined,
+}));
 
+  // 3) 둘 다 합치기
+  const events = [...crawlerEvents, ...etcEvents];
+
+  // 아무 일정도 없을 때
   if (events.length === 0) {
     return (
       <main className="min-h-screen flex items-center justify-center bg-background">
@@ -37,8 +51,8 @@ export default async function Page() {
           <h1 className="text-xl font-semibold">예매 오픈 일정이 없습니다.</h1>
           <p className="text-sm text-muted-foreground">
             각 사이트의 row에{" "}
-            <code className="mx-1">title / openAt</code> 필드를 채워주면 달력에
-            표시됩니다.
+            <code className="mx-1">title / openAt</code> 필드를 채워주거나,
+            관리자 계정으로 직접 공연 일정을 등록해보세요.
           </p>
         </div>
       </main>
@@ -49,10 +63,12 @@ export default async function Page() {
     <main className="min-h-screen bg-background">
       <div className="container mx-auto py-10 space-y-6">
         <header className="space-y-2">
-          <h1 className="text-2xl font-bold tracking-tight">공연 예매 오픈 달력</h1>
+          <h1 className="text-2xl font-bold tracking-tight">
+            공연 예매 오픈 달력
+          </h1>
           <p className="text-sm text-muted-foreground">
-            각 사이트에서 수집한 예매 오픈 시간을 기준으로 월간 스케줄을 한눈에
-            볼 수 있습니다.
+            각 사이트에서 수집한 예매 오픈 시간과 직접 등록한 일정을 기준으로
+            월간 스케줄을 한눈에 볼 수 있습니다.
           </p>
         </header>
 
@@ -76,6 +92,14 @@ function buildEvents(merged: MergedData): EventItem[] {
           ? (row.viewCount as number)
           : undefined;
 
+      // 🔥 detailUrl (사이트마다 필드명이 다를 수 있으니 두 가지 다 체크)
+      const detailUrl =
+        typeof row.detailUrl === "string"
+          ? (row.detailUrl as string)
+          : typeof row.url === "string"
+          ? (row.url as string)
+          : undefined;
+
       if (!title || !openAt) return;
 
       events.push({
@@ -85,6 +109,7 @@ function buildEvents(merged: MergedData): EventItem[] {
         title,
         openAt,
         viewCount,
+        detailUrl, // 🔥 추가
       });
     });
   }
@@ -92,3 +117,4 @@ function buildEvents(merged: MergedData): EventItem[] {
   events.sort((a, b) => a.openAt.localeCompare(b.openAt));
   return events;
 }
+

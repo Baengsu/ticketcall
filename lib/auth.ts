@@ -32,6 +32,11 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
+        // 🔥 정지된 계정이면 로그인 거부
+        if (user.isDisabled) {
+          throw new Error("AccountDisabled");
+        }
+
         const ok = await bcrypt.compare(
           credentials.password,
           user.passwordHash
@@ -39,12 +44,12 @@ export const authOptions: NextAuthOptions = {
 
         if (!ok) return null;
 
-        // 🔥 role까지 포함해서 세션으로 넘겨주기
         return {
           id: user.id,
           name: user.name ?? null,
           email: user.email ?? null,
           role: user.role ?? "user",
+          isDisabled: user.isDisabled ?? false,
         } as any;
       },
     }),
@@ -56,10 +61,10 @@ export const authOptions: NextAuthOptions = {
 
   callbacks: {
     async jwt({ token, user }) {
-      // 로그인 직후에는 user가 있고, 이후 요청에서는 token만 있음
       if (user) {
         token.id = (user as any).id;
         token.role = (user as any).role ?? "user";
+        (token as any).isDisabled = (user as any).isDisabled ?? false;
       }
       return token;
     },
@@ -67,6 +72,8 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         (session.user as any).id = token.id;
         (session.user as any).role = (token as any).role ?? "user";
+        (session.user as any).isDisabled =
+          (token as any).isDisabled ?? false;
       }
       return session;
     },
