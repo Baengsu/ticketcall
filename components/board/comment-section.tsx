@@ -83,7 +83,14 @@ export default function CommentSection({
                   {c.authorName ?? c.authorEmail ?? "익명"}
                 </span>
                 <span className="text-[11px] text-muted-foreground">
-                  {new Date(c.createdAt).toLocaleString()}
+                  {new Date(c.createdAt).toLocaleString("ko-KR", {
+                    timeZone: "Asia/Seoul",
+                    year: "numeric",
+                    month: "2-digit",
+                    day: "2-digit",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
                 </span>
               </div>
               <p className="text-sm whitespace-pre-wrap">{c.content}</p>

@@ -1,0 +1,6 @@
+- Use TypeScript strictly
+- Follow Next.js App Router conventions
+- Prefer server components unless necessary
+- Do not change existing folder structure without asking
+- Explain risky changes before applying
+- Always answer in Korean

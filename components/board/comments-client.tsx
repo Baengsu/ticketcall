@@ -171,7 +171,14 @@ export default function CommentsClient({
                 <div className="flex justify-between text-xs text-muted-foreground">
                   <span>{c.author?.name ?? "익명"}</span>
                   <span>
-                    {c.createdAt.slice(0, 16).replace("T", " ")}
+                    {new Date(c.createdAt).toLocaleString("ko-KR", {
+                      timeZone: "Asia/Seoul",
+                      year: "numeric",
+                      month: "2-digit",
+                      day: "2-digit",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
                   </span>
                 </div>
 

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { useState, useEffect } from "react";
+import { useTheme } from "next-themes";
 
 function NavLink({
   href,
@@ -22,10 +23,10 @@ function NavLink({
     <Link
       href={href}
       className={
-        "text-sm px-3 py-2 rounded-md transition " +
+        "text-sm px-3 py-2 rounded-lg font-medium transition-all " +
         (active
-          ? "bg-black text-white"
-          : "text-muted-foreground hover:bg-muted")
+          ? "bg-primary text-primary-foreground shadow-sm"
+          : "text-muted-foreground hover:text-foreground hover:bg-muted/50")
       }
     >
       {label}
@@ -37,6 +38,13 @@ export default function SiteHeader() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [rebuilding, setRebuilding] = useState(false);
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  // 다크모드 토글 버튼이 클라이언트에서만 렌더링되도록
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const user = session?.user as any | undefined;
   const email = user?.email as string | undefined;
@@ -106,16 +114,19 @@ export default function SiteHeader() {
   }
 
   return (
-    <header className="border-b bg-background">
-      <div className="container mx-auto h-14 flex items-center justify-between gap-4">
+    <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
+      <div className="container mx-auto h-16 flex items-center justify-between gap-4 px-4">
         {/* 왼쪽: 로고 */}
-        <div className="flex items-center gap-3">
-          <Link href="/" className="font-semibold text-sm">
+        <div className="flex items-center gap-6">
+          <Link 
+            href="/" 
+            className="font-bold text-lg bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent hover:opacity-80 transition-opacity"
+          >
             TicketForum
           </Link>
 
           {/* 메인 네비게이션 */}
-          <nav className="flex items-center gap-1">
+          <nav className="hidden md:flex items-center gap-1">
             <NavLink href="/" label="달력" />
             <NavLink href="/board/notice" label="공지사항" />
             <NavLink href="/board/free" label="건의사항" />
@@ -136,21 +147,34 @@ export default function SiteHeader() {
         </div>
 
         {/* 오른쪽: 로그인 / 사용자 정보 / 관리자 도구 */}
-        <div className="flex items-center gap-3 text-xs">
+        <div className="flex items-center gap-2">
+          {/* 다크모드 토글 버튼 */}
+          {mounted && (
+            <button
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              className="p-2 rounded-lg border hover:bg-muted transition-colors"
+              aria-label="다크모드 토글"
+            >
+              <span className="text-base">
+                {theme === "dark" ? "☀️" : "🌙"}
+              </span>
+            </button>
+          )}
+
           {status === "loading" ? (
-            <span className="text-muted-foreground">
-              세션 확인 중...
+            <span className="text-sm text-muted-foreground px-3">
+              로딩 중...
             </span>
           ) : session ? (
             <>
-              <div className="flex flex-col items-end leading-tight">
-                <span className="font-medium">
+              <div className="hidden sm:flex flex-col items-end leading-tight px-3">
+                <span className="text-sm font-medium">
                   {email ?? "로그인됨"}
                 </span>
-                <span className="text-[11px] text-muted-foreground">
+                <span className="text-xs text-muted-foreground">
                   {isAdmin ? "관리자" : "일반 사용자"}
                   {unreadCount > 0 && (
-                    <span className="ml-1 text-[11px] text-blue-600">
+                    <span className="ml-1 text-xs text-blue-600 dark:text-blue-400 font-semibold">
                       · 새 알림 {unreadCount}개
                     </span>
                   )}
@@ -161,15 +185,15 @@ export default function SiteHeader() {
                 <button
                   onClick={handleRebuild}
                   disabled={rebuilding}
-                  className="px-2 py-1 rounded-md bg-amber-500 text-white text-[11px] disabled:opacity-60"
+                  className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 text-white text-xs font-medium hover:from-amber-600 hover:to-amber-700 disabled:opacity-60 disabled:cursor-not-allowed transition-all shadow-sm"
                 >
-                  {rebuilding ? "리빌드 중..." : "크롤링 리빌드"}
+                  {rebuilding ? "리빌드 중..." : "리빌드"}
                 </button>
               )}
 
               <button
                 onClick={() => signOut({ callbackUrl: "/" })}
-                className="px-2 py-1 rounded-md border text-[11px]"
+                className="px-3 py-1.5 rounded-lg border hover:bg-muted text-xs font-medium transition-colors"
               >
                 로그아웃
               </button>
@@ -178,13 +202,13 @@ export default function SiteHeader() {
             <>
               <button
                 onClick={() => router.push("/auth/login")}
-                className="px-2 py-1 rounded-md border text-[11px]"
+                className="px-4 py-1.5 rounded-lg border hover:bg-muted text-sm font-medium transition-colors"
               >
                 로그인
               </button>
               <button
                 onClick={() => router.push("/auth/register")}
-                className="px-2 py-1 rounded-md bg-black text-white text-[11px]"
+                className="px-4 py-1.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity shadow-sm"
               >
                 회원가입
               </button>

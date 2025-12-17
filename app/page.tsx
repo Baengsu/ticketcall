@@ -4,7 +4,6 @@ import type { MergedData } from "@/lib/types";
 import CalendarClient from "@/components/calendar-client";
 import prisma from "@/lib/prisma";
 
-
 export const dynamic = "force-dynamic";
 
 export type EventItem = {
@@ -18,11 +17,15 @@ export type EventItem = {
 };
 
 export default async function Page() {
-  // 🔥 크롤링 데이터 + 직접 추가 일정(DB) 동시에 로드
-  const [merged, etcEventsRaw] = await Promise.all([
+  // 🔥 크롤링 데이터 + 직접 추가 일정(DB) + 마지막 리빌드 시간 동시에 로드
+  const [merged, etcEventsRaw, lastRebuildLog] = await Promise.all([
     loadLiveData(),
     prisma.etcEvent.findMany({
       orderBy: { datetime: "asc" },
+    }),
+    prisma.rebuildLog.findFirst({
+      where: { status: "success" },
+      orderBy: { createdAt: "desc" },
     }),
   ]);
 
@@ -43,6 +46,19 @@ export default async function Page() {
   // 3) 둘 다 합치기
   const events = [...crawlerEvents, ...etcEvents];
 
+  // 마지막 리빌드 시간 문자열 (분 단위까지)
+  const lastRebuildLabel = lastRebuildLog
+    ? new Date(lastRebuildLog.createdAt).toLocaleString("ko-KR", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+        timeZone: "Asia/Seoul",
+      })
+    : null;
+
   // 아무 일정도 없을 때
   if (events.length === 0) {
     return (
@@ -60,19 +76,35 @@ export default async function Page() {
   }
 
   return (
-    <main className="min-h-screen bg-background">
-      <div className="container mx-auto py-10 space-y-6">
-        <header className="space-y-2">
-          <h1 className="text-2xl font-bold tracking-tight">
-            공연 예매 오픈 달력
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            각 사이트에서 수집한 예매 오픈 시간과 직접 등록한 일정을 기준으로
-            월간 스케줄을 한눈에 볼 수 있습니다.
-          </p>
+    <main className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+      <div className="mx-auto px-4 sm:px-6 lg:px-8 xl:px-16 2xl:px-20 py-6 sm:py-8 md:py-10 lg:py-12 space-y-6 sm:space-y-8 w-full max-w-[1920px]">
+        <header className="space-y-4 sm:space-y-5">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-5">
+            <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-xl md:rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-xl">
+              <span className="text-3xl sm:text-4xl md:text-5xl">🎫</span>
+            </div>
+            <div className="flex-1 space-y-2">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-transparent bg-clip-text">
+                공연 예매 오픈 달력
+              </h1>
+              <p className="text-xs sm:text-sm md:text-base text-muted-foreground max-w-2xl leading-relaxed">
+                각 사이트에서 수집한 예매 오픈 시간과 직접 등록한 일정을 기준으로
+                월간 스케줄을 한눈에 볼 수 있습니다.
+              </p>
+            </div>
+          </div>
+          {lastRebuildLabel && (
+            <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-muted-foreground bg-muted/50 dark:bg-muted/30 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg md:rounded-xl border backdrop-blur-sm w-full sm:w-fit">
+              <span className="text-base sm:text-lg">🔄</span>
+              <span className="flex-1 sm:flex-initial">
+                마지막 데이터 리빌드 기준 시각:{" "}
+                <span className="font-semibold text-foreground">{lastRebuildLabel}</span>
+              </span>
+            </div>
+          )}
         </header>
 
-        <section>
+        <section className="w-full">
           <CalendarClient events={events} />
         </section>
       </div>

@@ -13,7 +13,7 @@ export default function LoginPage() {
   // 🔥 URL 쿼리로 넘어온 에러 코드 (?error=AccountDisabled 등)
   const errorCode = searchParams.get("error");
 
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
   const [loading, setLoading] = useState(false);
@@ -30,15 +30,15 @@ export default function LoginPage() {
     e.preventDefault();
     setErrorMsg(null);
 
-    if (!email || !password) {
-      setErrorMsg("이메일과 비밀번호를 입력해 주세요.");
+    if (!username || !password) {
+      setErrorMsg("아이디와 비밀번호를 입력해 주세요.");
       return;
     }
 
     setLoading(true);
     try {
       const res = await signIn("credentials", {
-        email,
+        username,
         password,
         redirect: false, // 직접 라우터로 이동 제어
       });
@@ -51,7 +51,7 @@ export default function LoginPage() {
           );
         } else {
           // 그 외에는 기존처럼 자격 증명 오류
-          setErrorMsg("이메일 또는 비밀번호가 올바르지 않습니다.");
+          setErrorMsg("아이디 또는 비밀번호가 올바르지 않습니다.");
         }
         return;
       }
@@ -68,62 +68,85 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="min-h-[calc(100vh-56px)] flex items-center justify-center px-4">
-      <div className="w-full max-w-md border rounded-lg p-6 bg-card shadow-sm">
-        <h1 className="text-xl font-semibold mb-4 text-center">로그인</h1>
-
-        {registered && (
-          <p className="mb-2 text-xs text-emerald-600 text-center">
-            회원가입이 완료되었습니다. 이메일과 비밀번호로 로그인해 주세요.
-          </p>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-1">
-            <label className="text-sm font-medium">이메일</label>
-            <input
-              type="email"
-              className="w-full rounded border px-3 py-2 text-sm bg-background"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              required
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-sm font-medium">비밀번호</label>
-            <input
-              type="password"
-              className="w-full rounded border px-3 py-2 text-sm bg-background"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="비밀번호"
-              required
-            />
-          </div>
-
-          {errorMsg && (
-            <p className="text-xs text-red-500 whitespace-pre-line">
-              {errorMsg}
+    <main className="min-h-[calc(100vh-64px)] flex items-center justify-center px-4 py-12 bg-gradient-to-br from-background via-background to-muted/20">
+      <div className="w-full max-w-md">
+        <div className="border rounded-xl p-8 bg-gradient-to-br from-card to-card/95 shadow-xl backdrop-blur-sm">
+          <div className="text-center mb-8">
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg">
+                <span className="text-2xl">🎫</span>
+              </div>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 text-transparent bg-clip-text">
+                로그인
+              </h1>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              TicketForum에 오신 것을 환영합니다
             </p>
+          </div>
+
+          {registered && (
+            <div className="mb-4 p-3 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800">
+              <p className="text-sm text-emerald-700 dark:text-emerald-400 text-center">
+                ✅ 회원가입이 완료되었습니다. 아이디와 비밀번호로 로그인해 주세요.
+              </p>
+            </div>
           )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-md bg-primary text-primary-foreground py-2 text-sm font-medium hover:opacity-90 disabled:opacity-60"
-          >
-            {loading ? "로그인 중..." : "로그인"}
-          </button>
-        </form>
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">아이디</label>
+              <input
+                type="text"
+                className="w-full rounded-lg border px-4 py-2.5 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="아이디를 입력하세요"
+                required
+              />
+            </div>
 
-        <p className="mt-4 text-xs text-center text-muted-foreground">
-          아직 계정이 없으신가요?{" "}
-          <a href="/auth/register" className="underline">
-            회원가입 하기
-          </a>
-        </p>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">비밀번호</label>
+              <input
+                type="password"
+                className="w-full rounded-lg border px-4 py-2.5 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="비밀번호"
+                required
+              />
+            </div>
+
+            {errorMsg && (
+              <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+                <p className="text-sm text-red-600 dark:text-red-400 whitespace-pre-line">
+                  {errorMsg}
+                </p>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full rounded-lg bg-primary text-primary-foreground py-2.5 text-sm font-medium hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed transition-all shadow-sm"
+            >
+              {loading ? "로그인 중..." : "로그인"}
+            </button>
+          </form>
+
+          <div className="mt-6 pt-6 border-t">
+            <p className="text-sm text-center text-muted-foreground">
+              아직 계정이 없으신가요?{" "}
+              <a 
+                href="/auth/register" 
+                className="text-primary font-medium hover:underline underline-offset-4"
+              >
+                회원가입 하기
+              </a>
+            </p>
+          </div>
+        </div>
       </div>
     </main>
   );

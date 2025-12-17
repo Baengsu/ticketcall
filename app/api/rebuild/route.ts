@@ -6,27 +6,47 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { buildMergedData, saveMergedData } from "@/lib/aggregate";
 
+// 크론(자동 스케줄러)에서도 호출할 수 있도록,
+// 헤더에 비밀 키가 있을 때는 세션/관리자 체크를 생략하고 시스템 계정으로 처리합니다.
 async function handleRebuild(req: Request) {
-  const session = await getServerSession(authOptions);
+  // Vercel Cron은 자동으로 x-vercel-cron 헤더를 보냅니다
+  const vercelCronHeader = req.headers.get("x-vercel-cron");
+  
+  // 또는 사용자 정의 secret을 사용할 수도 있습니다
+  const cronSecret = process.env.CRON_SECRET;
+  const headerSecret = req.headers.get("x-cron-secret");
+  const isCustomCron = !!cronSecret && headerSecret === cronSecret;
+  
+  // Vercel Cron 또는 사용자 정의 secret이 있으면 cron 요청으로 인식
+  const isCronRequest = vercelCronHeader === "1" || isCustomCron;
 
-  if (!session?.user?.email) {
-    return NextResponse.json(
-      { ok: false, message: "로그인이 필요합니다." },
-      { status: 401 }
-    );
-  }
+  let userEmail: string | null = null;
 
-  const userEmail = session.user.email;
+  if (!isCronRequest) {
+    const session = await getServerSession(authOptions);
 
-  const user = await prisma.user.findUnique({
-    where: { email: userEmail },
-  });
+    if (!session?.user?.email) {
+      return NextResponse.json(
+        { ok: false, message: "로그인이 필요합니다." },
+        { status: 401 }
+      );
+    }
 
-  if (!user || user.role !== "admin") {
-    return NextResponse.json(
-      { ok: false, message: "관리자만 실행할 수 있습니다." },
-      { status: 403 }
-    );
+    userEmail = session.user.email;
+
+    const user = await prisma.user.findUnique({
+      where: { email: userEmail },
+    });
+
+    if (!user || user.role !== "admin") {
+      return NextResponse.json(
+        { ok: false, message: "관리자만 실행할 수 있습니다." },
+        { status: 403 }
+      );
+    }
+  } else {
+    // 크론에서 호출한 경우, 로그에 남길 시스템 계정 표시
+    userEmail = "system-cron";
   }
 
   // 실제 크롤링 + 병합

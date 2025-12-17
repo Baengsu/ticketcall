@@ -16,41 +16,75 @@ export const authOptions: NextAuthOptions = {
     CredentialsProvider({
       name: "Credentials",
       credentials: {
-        email: { label: "이메일", type: "email" },
+        username: { label: "아이디", type: "text" },
         password: { label: "비밀번호", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
+        if (!credentials?.username || !credentials?.password) {
           return null;
         }
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
-        });
+        try {
+          // username 또는 email로 로그인 가능하도록 수정 (기존 사용자 호환성)
+          let user = null;
+          
+          // 먼저 username으로 시도
+          try {
+            user = await prisma.user.findUnique({
+              where: { username: credentials.username },
+            });
+          } catch (err: any) {
+            // username 필드가 없거나 unique 제약이 없는 경우
+            if (err.code === "P2001" || err.message?.includes("Unknown arg `username`")) {
+              console.error("[Auth] Username field not found, trying email...");
+            } else {
+              throw err;
+            }
+          }
 
-        if (!user || !user.passwordHash) {
+          // username으로 찾지 못하면 email로 시도 (기존 사용자용)
+          if (!user) {
+            try {
+              user = await prisma.user.findUnique({
+                where: { email: credentials.username },
+              });
+            } catch (err: any) {
+              console.error("[Auth] Error finding user by email:", err);
+              return null;
+            }
+          }
+
+          if (!user || !user.passwordHash) {
+            return null;
+          }
+
+          // 🔥 정지된 계정이면 로그인 거부
+          if (user.isDisabled) {
+            throw new Error("AccountDisabled");
+          }
+
+          const ok = await bcrypt.compare(
+            credentials.password,
+            user.passwordHash
+          );
+
+          if (!ok) return null;
+
+          return {
+            id: user.id,
+            name: user.nickname ?? user.name ?? null,
+            email: user.email ?? null,
+            role: user.role ?? "user",
+            isDisabled: user.isDisabled ?? false,
+          } as any;
+        } catch (err: any) {
+          console.error("[Auth] Authorize error:", err);
+          // AccountDisabled는 그대로 throw
+          if (err.message === "AccountDisabled") {
+            throw err;
+          }
           return null;
         }
-
-        // 🔥 정지된 계정이면 로그인 거부
-        if (user.isDisabled) {
-          throw new Error("AccountDisabled");
-        }
-
-        const ok = await bcrypt.compare(
-          credentials.password,
-          user.passwordHash
-        );
-
-        if (!ok) return null;
-
-        return {
-          id: user.id,
-          name: user.name ?? null,
-          email: user.email ?? null,
-          role: user.role ?? "user",
-          isDisabled: user.isDisabled ?? false,
-        } as any;
       },
     }),
   ],

@@ -40,8 +40,25 @@ export default async function PostDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  const post = await prisma.post.findUnique({
+  // 먼저 게시글이 존재하는지 확인
+  const postExists = await prisma.post.findUnique({
     where: { id: postIdNum },
+    select: { id: true, categoryId: true },
+  });
+
+  if (!postExists) {
+    console.error(`[PostDetail] Post not found: postID=${postID}, slug=${slug}`);
+    notFound();
+  }
+
+  // 조회수 증가 (페이지 로드 시 자동 증가)
+  const post = await prisma.post.update({
+    where: { id: postIdNum },
+    data: {
+      viewCount: {
+        increment: 1,
+      },
+    },
     include: {
       author: true,
       comments: {
@@ -52,7 +69,8 @@ export default async function PostDetailPage({ params }: PageProps) {
     },
   });
 
-  if (!post || post.categoryId !== category.id) {
+  if (post.categoryId !== category.id) {
+    console.error(`[PostDetail] Category mismatch: post.categoryId=${post.categoryId}, category.id=${category.id}, slug=${slug}`);
     notFound();
   }
 
@@ -68,12 +86,15 @@ export default async function PostDetailPage({ params }: PageProps) {
 
   // 🔥 숨김 처리된 글은 관리자만 접근 가능
   if (post.isHidden && !isAdmin) {
+    console.error(`[PostDetail] Hidden post access denied: postID=${postID}, userId=${currentUserId}, isAdmin=${isAdmin}`);
     notFound();
   }
 
   // 🔥 건의사항: 작성자 + 관리자만 페이지 접근 가능
   if (isSuggest && !isAdmin && !isAuthor) {
-    notFound();
+    console.error(`[PostDetail] Suggest post access denied: postID=${postID}, slug=${slug}, userId=${currentUserId}, post.authorId=${post.authorId}, isAdmin=${isAdmin}, isAuthor=${isAuthor}`);
+    // 건의사항은 작성자와 관리자만 볼 수 있으므로 404 대신 권한 없음 페이지로 리다이렉트
+    redirect(`/board/${slug}?error=access_denied`);
   }
 
   const initialComments: CommentItem[] = post.comments.map((c) => ({
@@ -104,7 +125,17 @@ export default async function PostDetailPage({ params }: PageProps) {
             <span>게시판: {category.name}</span>
             <span>작성자: {post.author?.name ?? "익명"}</span>
             <span>
-              {post.createdAt.toISOString().slice(0, 16).replace("T", " ")}
+              {post.createdAt.toLocaleString("ko-KR", {
+                timeZone: "Asia/Seoul",
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </span>
+            <span className="flex items-center gap-1">
+              👁️ 조회 {post.viewCount ?? 0}
             </span>
             {isNotice && post.isPinned && (
               <span className="font-semibold text-orange-600">
@@ -287,10 +318,14 @@ export default async function PostDetailPage({ params }: PageProps) {
             {post.adminRepliedAt && (
               <p className="mt-1 text-[11px] text-muted-foreground">
                 답변 시간:{" "}
-                {post.adminRepliedAt
-                  .toISOString()
-                  .slice(0, 16)
-                  .replace("T", " ")}
+                {post.adminRepliedAt.toLocaleString("ko-KR", {
+                  timeZone: "Asia/Seoul",
+                  year: "numeric",
+                  month: "2-digit",
+                  day: "2-digit",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
               </p>
             )}
           </div>
