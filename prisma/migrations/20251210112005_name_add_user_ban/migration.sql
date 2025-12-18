@@ -1,4 +1,0 @@
--- AlterTable
-ALTER TABLE `user` ADD COLUMN `banReason` VARCHAR(191) NULL,
-    ADD COLUMN `bannedAt` DATETIME(3) NULL,
-    ADD COLUMN `isDisabled` BOOLEAN NOT NULL DEFAULT false;

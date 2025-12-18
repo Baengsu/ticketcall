@@ -109,6 +109,11 @@ model Post {
   author   User          @relation(fields: [authorId], references: [id])
   comments Comment[]
   reports  Report[]
+
+  @@index([categoryId])
+  @@index([authorId])
+  @@index([createdAt])
+  @@index([isPinned, createdAt])
 }
 
 model Comment {
@@ -121,6 +126,10 @@ model Comment {
 
   post   Post @relation(fields: [postId], references: [id], onDelete: Cascade)
   author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@index([authorId])
+  @@index([createdAt])
 }
 
 model RebuildLog {
@@ -155,6 +164,10 @@ model Notification {
   read      Boolean  @default(false)
 
   user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([userId, read])
+  @@index([createdAt])
 }
 
 model EtcEvent {
