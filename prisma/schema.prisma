@@ -114,6 +114,7 @@ model Post {
   @@index([authorId])
   @@index([createdAt])
   @@index([isPinned, createdAt])
+  @@index([isHidden])
 }
 
 model Comment {
@@ -138,6 +139,9 @@ model RebuildLog {
   status    String // "success" | "error" 같은 값
   message   String   @db.Text // 요약 메시지 (예: "YES 120건, Melon 98건 통합 완료")
   userEmail String? // 누가 눌렀는지 (관리자 이메일)
+
+  @@index([status])
+  @@index([createdAt])
 }
 
 model Report {
@@ -153,6 +157,10 @@ model Report {
   reporter   User?   @relation(fields: [reporterId], references: [id])
 
   post Post? @relation(fields: [postId], references: [id])
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([postId])
 }
 
 model Notification {
@@ -182,6 +190,9 @@ model EtcEvent {
   updatedAt DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([datetime])
 }
 
 model Favorite {
