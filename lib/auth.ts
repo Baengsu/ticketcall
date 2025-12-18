@@ -1,15 +1,31 @@
 // lib/auth.ts
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcrypt";
 import prisma from "./prisma";
 
-export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma) as any,
+// Railway/프로덕션 환경 변수 검증
+if (process.env.NODE_ENV === "production" && !process.env.NEXTAUTH_SECRET) {
+  throw new Error(
+    "NEXTAUTH_SECRET is required in production. Please set it in Railway environment variables."
+  );
+}
 
+export const authOptions: NextAuthOptions = {
+  // NextAuth secret (필수, Railway 환경 변수에서 설정)
+  secret: process.env.NEXTAUTH_SECRET,
+
+  // NextAuth v4는 NEXTAUTH_URL 환경 변수를 자동으로 사용하여 호스트 신뢰
+  // Railway에서 NEXTAUTH_URL을 설정하면 자동으로 프록시 환경 처리됨
+
+  // JWT 전략: 낮은 트래픽 개인 앱에 최적화
+  // - DB 쿼리 없이 빠른 인증
+  // - Railway 서버리스 환경에 적합
+  // - PrismaAdapter 불필요 (JWT는 DB 세션 테이블 미사용)
   session: {
     strategy: "jwt",
+    // JWT 토큰 만료 시간: 30일 (개인 앱에 적합)
+    maxAge: 30 * 24 * 60 * 60, // 30 days in seconds
   },
 
   providers: [
@@ -116,6 +132,15 @@ export const authOptions: NextAuthOptions = {
           (token as any).isDisabled ?? false;
       }
       return session;
+    },
+    // Railway/프로덕션 환경에서 redirect URL 안전성 보장
+    async redirect({ url, baseUrl }) {
+      // 상대 경로는 baseUrl과 결합
+      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      // 같은 origin이면 허용
+      if (new URL(url).origin === baseUrl) return url;
+      // 그 외는 baseUrl로 리다이렉트 (보안)
+      return baseUrl;
     },
   },
 };
