@@ -7,12 +7,12 @@ cmds = [
   "npm run build"
 ]
 
-[phases.deploy]
-# PostgreSQL 마이그레이션 적용 (배포 시 자동 실행)
-# 첫 배포 시 모든 마이그레이션이 순차적으로 적용됨
-cmds = ["npx prisma migrate deploy"]
+# [phases.deploy] 섹션 제거
+# migrate deploy는 빌드 단계에서 실행되면 안 됨 (P1001 오류 발생)
+# migrate는 런타임 start 명령에서만 실행됨 (Railway Start Command 설정)
 
 [start]
 # Next.js 프로덕션 서버 시작
 # Railway가 자동으로 포트를 할당함
+# Railway Start Command: "npx prisma migrate deploy && npm start"
 cmd = "npm start"
