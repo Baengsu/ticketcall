@@ -12,7 +12,8 @@ cmds = [
 # migrate는 런타임 start 명령에서만 실행됨 (Railway Start Command 설정)
 
 [start]
-# Next.js 프로덕션 서버 시작
+# Railway/Nixpacks start command 강제 지정
+# 1. Prisma db push로 스키마를 DB에 동기화 (테이블 생성)
+# 2. Next.js 프로덕션 서버 시작
 # Railway가 자동으로 포트를 할당함
-# Railway Start Command: "npx prisma migrate deploy && npm start"
-cmd = "npm start"
+cmd = "npx prisma db push && npm start"
