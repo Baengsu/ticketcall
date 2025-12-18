@@ -1,0 +1,31 @@
+﻿   ??Next.js 16.0.10 (Turbopack)
+   - Environments: .env
+
+node.exe :  ??The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.or
+g/docs/messages/middleware-to-proxy
+위치 줄:1 문자:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( ??The "middlew...leware-to-proxy:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+   Creating an optimized production build ...
+ ??Compiled successfully in 2.3s
+   Running TypeScript ...
+Failed to compile.
+
+./app/admin/reports/page.tsx:86:38
+Type error: Parameter 'r' implicitly has an 'any' type.
+
+[0m [90m 84 |[39m               [33m<[39m[33m/[39m[33mthead[39m[33m>[39m
+ [90m 85 |[39m               [33m<[39m[33mtbody[39m[33m>[39m
+[31m[1m>[22m[39m[90m 86 |[39m                 {pendingReports[33m.[39mmap((r) [33m=>[39m (
+ [90m    |[39m                                      [31m[1m^[22m[39m
+ [90m 87 |[39m                   [33m<[39m[33mtr[39m key[33m=[39m{r[33m.[39mid} className[33m=[39m[32m"bor
+der-t"[39m[33m>[39m
+ [90m 88 |[39m                     [33m<[39m[33mtd[39m className[33m=[39m[32m"px-3 py-2 align-top text-xs"[39
+m[33m>[39m
+ [90m 89 |[39m                       {r[33m.[39mtargetType [33m===[39m [32m"post"[39m [33m&&[39m r[33m.[39m
+post [33m?[39m ([0m
+Next.js build worker exited with code: 1 and signal: null
+
