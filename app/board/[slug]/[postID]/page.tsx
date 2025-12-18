@@ -97,7 +97,7 @@ export default async function PostDetailPage({ params }: PageProps) {
     redirect(`/board/${slug}?error=access_denied`);
   }
 
-  const initialComments: CommentItem[] = post.comments.map((c) => ({
+  const initialComments: CommentItem[] = post.comments.map((c: typeof post.comments[0]) => ({
     id: c.id,
     content: c.content,
     createdAt: c.createdAt.toISOString(),

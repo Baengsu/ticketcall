@@ -6,7 +6,7 @@ import SearchFilter from "./search-filter";
 interface Post {
   id: number;
   title: string;
-  author?: { name: string | null } | null;
+  author?: { id: string; name: string | null } | null;
   createdAt: Date;
   _count: { comments: number };
   isPinned?: boolean;
@@ -60,7 +60,7 @@ export default function PostsList({
 
       <div className="space-y-2">
         {filteredPosts.map((post) => {
-          const isAuthor = currentUserId === post.authorId;
+          const isAuthor = currentUserId === post.author?.id;
           const rawTitle = post.title;
           const commentCount = post._count.comments;
           const DONE_PREFIX = "[완료] ";

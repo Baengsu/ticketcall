@@ -92,8 +92,8 @@ export default async function AdminUsersPage() {
                 <th className="px-3 py-2 text-left w-32">권한 변경</th>
               </tr>
             </thead>
-            <tbody>
-              {users.map((u, index) => {
+             <tbody>
+               {users.map((u: typeof users[0], index: number) => {
                 const isCurrent = u.id === currentUserId;
                 const isAdmin = u.role === "admin";
                 const postCount = (u as any)._count?.posts ?? 0;

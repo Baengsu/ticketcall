@@ -6,6 +6,18 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { redirect } from "next/navigation";
 
+type EtcEvent = {
+  id: number;
+  userId: string;
+  title: string;
+  datetime: Date;
+  place: string | null;
+  url: string | null;
+  memo: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 export default async function AdminEtcEventsPage() {
   const session = await getServerSession(authOptions);
   const user = session?.user as any | undefined;
@@ -179,7 +191,7 @@ export default async function AdminEtcEventsPage() {
               </tr>
             </thead>
             <tbody>
-              {events.map((e) => (
+              {events.map((e: EtcEvent) => (
                 <tr key={e.id} className="border-t align-top">
                   <td className="px-3 py-2 text-[11px] text-muted-foreground">
                     {e.datetime.toISOString().slice(0, 16).replace("T", " ")}

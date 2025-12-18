@@ -140,7 +140,7 @@ export default async function AdminUserDetailPage({ params }: PageProps) {
 
   // 🔥 이 유저의 건의사항 글만 필터 (slug = "free")
   const suggestPosts = user.posts.filter(
-    (p) => p.category?.slug === SUGGEST_SLUG
+    (p: typeof user.posts[0]) => p.category?.slug === SUGGEST_SLUG
   );
   const suggestCount = suggestPosts.length;
 
@@ -254,8 +254,8 @@ export default async function AdminUserDetailPage({ params }: PageProps) {
                   <th className="px-3 py-2 text-left w-24">관리</th>
                 </tr>
               </thead>
-              <tbody>
-                {suggestPosts.map((post) => (
+               <tbody>
+                 {suggestPosts.map((post: typeof suggestPosts[0]) => (
                   <tr key={post.id} className="border-t align-top">
                     <td className="px-3 py-2 align-top">
                       <div className="line-clamp-2 text-sm">
@@ -315,8 +315,8 @@ export default async function AdminUserDetailPage({ params }: PageProps) {
                   <th className="px-3 py-2 text-left w-24">관리</th>
                 </tr>
               </thead>
-              <tbody>
-                {user.posts.map((post) => (
+               <tbody>
+                 {user.posts.map((post: typeof user.posts[0]) => (
                   <tr key={post.id} className="border-t align-top">
                     <td className="px-3 py-2 align-top whitespace-nowrap">
                       {post.category?.name ?? "-"}
@@ -379,8 +379,8 @@ export default async function AdminUserDetailPage({ params }: PageProps) {
                   <th className="px-3 py-2 text-left w-24">관리</th>
                 </tr>
               </thead>
-              <tbody>
-                {user.comments.map((comment) => (
+               <tbody>
+                 {user.comments.map((comment: typeof user.comments[0]) => (
                   <tr key={comment.id} className="border-t align-top">
                     <td className="px-3 py-2 align-top whitespace-nowrap">
                       {comment.post?.category?.name ?? "-"}

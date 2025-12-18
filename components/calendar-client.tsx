@@ -460,7 +460,7 @@ function EventPopover({ ev, isFavorite: isFavoriteProp, onFavoriteChange }: { ev
             }
           >
             <span>조회수:</span>
-            <span className="font-bold">{ev.viewCount.toLocaleString()}회</span>
+            <span className="font-bold">{(ev.viewCount ?? 0).toLocaleString()}회</span>
             {isHot && (
               <span className="ml-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-orange-100 to-red-100 dark:from-orange-900/40 dark:to-red-900/40 text-orange-700 dark:text-orange-300 text-[10px] font-bold border border-orange-300 dark:border-orange-700">
                 🔥 HOT

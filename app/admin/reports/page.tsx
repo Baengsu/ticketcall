@@ -83,7 +83,7 @@ export default async function AdminReportsPage() {
                 </tr>
               </thead>
               <tbody>
-                {pendingReports.map((r) => (
+                {pendingReports.map((r: typeof pendingReports[0]) => (
                   <tr key={r.id} className="border-t">
                     <td className="px-3 py-2 align-top text-xs">
                       {r.targetType === "post" && r.post ? (
@@ -170,7 +170,7 @@ export default async function AdminReportsPage() {
                 </tr>
               </thead>
               <tbody>
-                {handledReports.map((r) => (
+                {handledReports.map((r: typeof handledReports[0]) => (
                   <tr key={r.id} className="border-t">
                     <td className="px-3 py-2 align-top text-xs">
                       {r.status === "resolved" ? "처리 완료" : "무시"}

@@ -47,7 +47,7 @@ export async function GET() {
       },
     });
 
-    const pinned = pinnedNotices.map((p) => ({
+    const pinned = pinnedNotices.map((p: typeof pinnedNotices[0]) => ({
       id: p.id,
       title: p.title,
       createdAt: p.createdAt.toISOString(),
@@ -57,7 +57,7 @@ export async function GET() {
       isHidden: p.isHidden,
     }));
 
-    const hidden = hiddenPosts.map((p) => ({
+    const hidden = hiddenPosts.map((p: typeof hiddenPosts[0]) => ({
       id: p.id,
       title: p.title,
       createdAt: p.createdAt.toISOString(),

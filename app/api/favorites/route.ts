@@ -87,7 +87,7 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    const eventIds = favorites.map((f) => f.eventId);
+    const eventIds = favorites.map((f: typeof favorites[0]) => f.eventId);
 
     return NextResponse.json({ ok: true, favorites: eventIds });
   } catch (error) {

@@ -3,18 +3,20 @@
 import { useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 
+type PostItem = {
+  id: number;
+  title: string;
+  author?: { id: string; name: string | null } | null;
+  createdAt: Date;
+  _count: { comments: number };
+  isPinned?: boolean;
+  isHidden?: boolean;
+  viewCount?: number;
+};
+
 interface SearchFilterProps {
-  posts: Array<{
-    id: number;
-    title: string;
-    author?: { name: string | null } | null;
-    createdAt: Date;
-    _count: { comments: number };
-    isPinned?: boolean;
-    isHidden?: boolean;
-    viewCount?: number;
-  }>;
-  onFilteredPostsChange?: (filtered: typeof posts) => void;
+  posts: PostItem[];
+  onFilteredPostsChange?: (filtered: PostItem[]) => void;
 }
 
 export default function SearchFilter({

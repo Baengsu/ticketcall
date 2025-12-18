@@ -1,11 +1,11 @@
 // app/auth/login/page.tsx
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useState, Suspense } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const registered = searchParams.get("registered");
@@ -149,5 +149,17 @@ export default function LoginPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-[calc(100vh-64px)] flex items-center justify-center px-4 py-12">
+        <div className="text-center">로딩 중...</div>
+      </main>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }
