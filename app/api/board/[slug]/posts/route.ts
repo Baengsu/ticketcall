@@ -56,7 +56,7 @@ export async function POST(req: Request, context: RouteContext) {
     const isNotice = slug === NOTICE_SLUG;
     const isSuggest = slug === SUGGEST_SLUG;
 
-    // 🔥 공지사항은 admin만 작성 가능
+    // Only admin can write notices
     if (isNotice && !isAdmin) {
       return NextResponse.json(
         { ok: false, message: "공지사항은 관리자만 작성할 수 있습니다." },
@@ -64,7 +64,7 @@ export async function POST(req: Request, context: RouteContext) {
       );
     }
 
-    // 🔥 건의사항(suggest) / 기타 게시판은 로그인 유저면 누구나 작성 가능
+    // Any logged-in user can write to suggest/free boards
     const post = await prisma.post.create({
       data: {
         title,

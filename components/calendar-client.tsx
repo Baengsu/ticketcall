@@ -1,7 +1,8 @@
 // components/calendar-client.tsx
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import {
   Card,
   CardHeader,
@@ -34,6 +35,22 @@ export default function CalendarClient({ events }: { events: EventItem[] }) {
   // 브라우저 기준 "오늘" (한국에서 쓰면 사실상 KST)
   const today = new Date();
   const todayKey = dateKey(today);
+  const { data: session } = useSession();
+  const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
+
+  // 찜한 공연 목록 가져오기
+  useEffect(() => {
+    if (session?.user) {
+      fetch("/api/favorites")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.ok) {
+            setFavoriteIds(data.favorites || []);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [session]);
 
   // 현재 보고 있는 달을 Date 하나로만 관리
   const [current, setCurrent] = useState<Date>(() => {
@@ -184,9 +201,29 @@ export default function CalendarClient({ events }: { events: EventItem[] }) {
                   )}
                 </div>
                 <div className="mt-auto space-y-0.5 sm:space-y-1 flex-1 overflow-hidden">
-                  {cell.events.map((ev) => (
-                    <EventPopover key={ev.id} ev={ev} />
-                  ))}
+                  {cell.events.map((ev) => {
+                    const isFav = favoriteIds.includes(ev.id);
+                    return (
+                      <EventPopover
+                        key={ev.id}
+                        ev={ev}
+                        isFavorite={isFav}
+                        onFavoriteChange={() => {
+                          // 찜하기 상태 변경 시 목록 새로고침
+                          if (session?.user) {
+                            fetch("/api/favorites")
+                              .then((res) => res.json())
+                              .then((data) => {
+                                if (data.ok) {
+                                  setFavoriteIds(data.favorites || []);
+                                }
+                              })
+                              .catch(() => {});
+                          }
+                        }}
+                      />
+                    );
+                  })}
                 </div>
               </div>
             );
@@ -294,11 +331,51 @@ function getSiteIcon(siteId: string): string | null {
 
 // ---- 팝오버(스티커) ----
 
-function EventPopover({ ev }: { ev: EventItem }) {
+function EventPopover({ ev, isFavorite: isFavoriteProp, onFavoriteChange }: { ev: EventItem; isFavorite?: boolean; onFavoriteChange?: () => void }) {
   const shortTitle = truncate(ev.title, 20);
   const hasView = typeof ev.viewCount === "number";
   const isHot = hasView && (ev.viewCount ?? 0) >= 10000;
   const iconSrc = getSiteIcon(ev.siteId);
+  const { data: session } = useSession();
+  const [isFavorite, setIsFavorite] = useState(isFavoriteProp || false);
+  const [loading, setLoading] = useState(false);
+
+  // 찜하기 상태 동기화
+  useEffect(() => {
+    setIsFavorite(isFavoriteProp || false);
+  }, [isFavoriteProp]);
+
+  const handleToggleFavorite = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!session?.user) {
+      alert("로그인이 필요합니다.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch("/api/favorites", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ eventId: ev.id }),
+      });
+
+      const data = await res.json();
+      if (data.ok) {
+        setIsFavorite(data.isFavorite);
+        // 부모 컴포넌트에 변경 알림
+        if (onFavoriteChange) {
+          onFavoriteChange();
+        }
+      }
+    } catch (error) {
+      console.error("Favorite toggle error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <Popover>
@@ -306,8 +383,10 @@ function EventPopover({ ev }: { ev: EventItem }) {
         <button
           className={
             "block w-full text-left rounded-md px-1.5 py-1 sm:px-2 sm:py-1.5 transition-all hover:scale-105 " +
-            (isHot
-              ? "bg-gradient-to-r from-pink-200 to-rose-200 dark:from-pink-900/40 dark:to-rose-900/40 hover:from-pink-300 hover:to-rose-300 dark:hover:from-pink-900/60 dark:hover:to-rose-900/60 border border-pink-300 dark:border-pink-700"
+            (isFavorite
+              ? "bg-gradient-to-r from-pink-300 via-rose-300 to-pink-400 dark:from-pink-800/60 dark:via-rose-800/60 dark:to-pink-900/60 hover:from-pink-400 hover:via-rose-400 hover:to-pink-500 dark:hover:from-pink-900/80 dark:hover:via-rose-900/80 dark:hover:to-pink-950/80 border-2 border-pink-400 dark:border-pink-600 shadow-md"
+              : isHot
+              ? "bg-gradient-to-r from-orange-300 via-red-300 to-orange-400 dark:from-orange-800/60 dark:via-red-800/60 dark:to-orange-900/60 hover:from-orange-400 hover:via-red-400 hover:to-orange-500 dark:hover:from-orange-900/80 dark:hover:via-red-900/80 dark:hover:to-orange-950/80 border-2 border-orange-400 dark:border-orange-600 shadow-md"
               : "bg-primary/10 hover:bg-primary/20 border border-primary/20")
           }
         >
@@ -324,7 +403,11 @@ function EventPopover({ ev }: { ev: EventItem }) {
               <span
                 className={
                   "truncate text-[9px] sm:text-[10px] md:text-[11px] " +
-                  (isHot ? "font-bold text-pink-700 dark:text-pink-300" : "font-medium")
+                  (isFavorite
+                    ? "font-bold text-pink-800 dark:text-pink-200"
+                    : isHot
+                    ? "font-bold text-orange-800 dark:text-orange-200"
+                    : "font-medium")
                 }
               >
                 {shortTitle}
@@ -379,16 +462,33 @@ function EventPopover({ ev }: { ev: EventItem }) {
             <span>조회수:</span>
             <span className="font-bold">{ev.viewCount.toLocaleString()}회</span>
             {isHot && (
-              <span className="ml-1 px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-[10px] font-bold">
+              <span className="ml-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-orange-100 to-red-100 dark:from-orange-900/40 dark:to-red-900/40 text-orange-700 dark:text-orange-300 text-[10px] font-bold border border-orange-300 dark:border-orange-700">
                 🔥 HOT
               </span>
             )}
           </div>
         )}
 
-        {/* 🔥 예매 / 상세 페이지 바로가기 버튼 */}
-        {ev.detailUrl && (
+        {/* 찜하기 버튼 */}
+        {session?.user && (
           <div className="pt-2 border-t">
+            <button
+              onClick={handleToggleFavorite}
+              disabled={loading}
+              className={`inline-flex items-center justify-center w-full px-4 py-2.5 rounded-lg text-xs sm:text-sm font-semibold transition-all shadow-md hover:shadow-lg disabled:opacity-50 ${
+                isFavorite
+                  ? "bg-gradient-to-r from-pink-500 via-rose-500 to-pink-600 text-white hover:from-pink-600 hover:via-rose-600 hover:to-pink-700 shadow-pink-200 dark:shadow-pink-900/50"
+                  : "bg-muted hover:bg-muted/80 text-foreground"
+              }`}
+            >
+              {isFavorite ? "❤️ 찜한 공연" : "🤍 찜하기"}
+            </button>
+          </div>
+        )}
+
+        {/* 예매 / 상세 페이지 바로가기 버튼 */}
+        {ev.detailUrl && (
+          <div className={session?.user ? "pt-2" : "pt-2 border-t"}>
             <a
               href={ev.detailUrl}
               target="_blank"

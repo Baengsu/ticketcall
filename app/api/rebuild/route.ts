@@ -54,7 +54,7 @@ async function handleRebuild(req: Request) {
     const merged = await buildMergedData();
     await saveMergedData(merged);
 
-    // 🔥 성공 로그 기록
+    // Success log
     const siteCount = merged.sites?.length ?? 0;
     const generatedAt = merged.generatedAt ?? null;
 
@@ -81,7 +81,7 @@ async function handleRebuild(req: Request) {
   } catch (e: any) {
     console.error("rebuild error", e);
 
-    // 🔥 실패 로그 기록
+    // Error log
     const errorMessage =
       e?.message ?? "리빌드 중 알 수 없는 오류가 발생했습니다.";
 

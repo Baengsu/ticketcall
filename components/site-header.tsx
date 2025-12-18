@@ -48,8 +48,14 @@ export default function SiteHeader() {
 
   const user = session?.user as any | undefined;
   const email = user?.email as string | undefined;
+  const nickname = user?.nickname as string | undefined;
+  const username = user?.username as string | undefined;
+  const name = user?.name as string | undefined;
   const role = user?.role as string | undefined;
   const isAdmin = role === "admin";
+  
+  // 표시할 이름: nickname > username > name > email 순서
+  const displayName = nickname || username || name || email || "로그인됨";
 
    // 🔥 정지된 계정은 자동 로그아웃
   useEffect(() => {
@@ -169,7 +175,7 @@ export default function SiteHeader() {
             <>
               <div className="hidden sm:flex flex-col items-end leading-tight px-3">
                 <span className="text-sm font-medium">
-                  {email ?? "로그인됨"}
+                  {displayName}
                 </span>
                 <span className="text-xs text-muted-foreground">
                   {isAdmin ? "관리자" : "일반 사용자"}

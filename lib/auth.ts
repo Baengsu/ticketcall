@@ -74,6 +74,8 @@ export const authOptions: NextAuthOptions = {
             id: user.id,
             name: user.nickname ?? user.name ?? null,
             email: user.email ?? null,
+            nickname: user.nickname ?? null,
+            username: user.username ?? null,
             role: user.role ?? "user",
             isDisabled: user.isDisabled ?? false,
           } as any;
@@ -98,6 +100,8 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = (user as any).id;
         token.role = (user as any).role ?? "user";
+        token.nickname = (user as any).nickname ?? null;
+        token.username = (user as any).username ?? null;
         (token as any).isDisabled = (user as any).isDisabled ?? false;
       }
       return token;
@@ -106,6 +110,8 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         (session.user as any).id = token.id;
         (session.user as any).role = (token as any).role ?? "user";
+        (session.user as any).nickname = (token as any).nickname ?? null;
+        (session.user as any).username = (token as any).username ?? null;
         (session.user as any).isDisabled =
           (token as any).isDisabled ?? false;
       }

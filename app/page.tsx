@@ -2,6 +2,7 @@
 import { loadLiveData } from "@/lib/aggregate";
 import type { MergedData } from "@/lib/types";
 import CalendarClient from "@/components/calendar-client";
+import FavoritesList from "@/components/favorites-list";
 import prisma from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -108,6 +109,9 @@ export default async function Page() {
           <CalendarClient events={events} />
         </section>
       </div>
+      
+      {/* 찜한 공연 팝업 (항상 따라다님) */}
+      <FavoritesList events={events} />
     </main>
   );
 }

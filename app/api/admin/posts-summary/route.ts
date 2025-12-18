@@ -17,7 +17,7 @@ export async function GET() {
   }
 
   try {
-    // 🔥 상단 고정된 공지들
+    // Pinned notices
     const pinnedNotices = await prisma.post.findMany({
       where: {
         isPinned: true,
@@ -34,7 +34,7 @@ export async function GET() {
       },
     });
 
-    // 🔥 숨김 처리된 모든 게시글
+    // All hidden posts
     const hiddenPosts = await prisma.post.findMany({
       where: {
         isHidden: true,
