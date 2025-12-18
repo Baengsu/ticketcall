@@ -17,20 +17,51 @@ export default async function AdminReportsPage() {
     where: { status: "pending" },
     include: {
       post: {
-        include: { category: true },
+        select: {
+          id: true,
+          title: true,
+          category: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+            },
+          },
+        },
       },
-      reporter: true,
+      reporter: {
+        select: {
+          id: true,
+          email: true,
+        },
+      },
     },
     orderBy: { createdAt: "desc" },
+    take: 100,
   });
 
   const handledReports = await prisma.report.findMany({
     where: { status: { in: ["resolved", "ignored"] } },
     include: {
       post: {
-        include: { category: true },
+        select: {
+          id: true,
+          title: true,
+          category: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+            },
+          },
+        },
       },
-      reporter: true,
+      reporter: {
+        select: {
+          id: true,
+          email: true,
+        },
+      },
     },
     orderBy: { createdAt: "desc" },
     take: 50,

@@ -34,10 +34,11 @@ export default async function MyPage() {
   const role = (user.role as string | undefined) ?? "user";
   const isAdmin = role === "admin";
 
-  // 🔔 모든 알림 가져오기 (페이지네이션은 클라이언트에서 처리)
+  // 🔔 최근 알림 가져오기 (최신 50개)
   const recentNotifications = await prisma.notification.findMany({
     where: { userId },
     orderBy: { createdAt: "desc" },
+    take: 50,
   });
 
   // 🔔 마이페이지 입장 시 내 모든 알림을 읽음 처리

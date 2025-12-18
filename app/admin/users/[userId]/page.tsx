@@ -110,17 +110,37 @@ export default async function AdminUserDetailPage({ params }: PageProps) {
       bannedAt: true,
       banReason: true,
       posts: {
-        include: {
-          category: true,
+        select: {
+          id: true,
+          title: true,
+          createdAt: true,
+          category: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+            },
+          },
         },
         orderBy: { createdAt: "desc" },
         take: 50,
       },
       comments: {
-        include: {
+        select: {
+          id: true,
+          content: true,
+          createdAt: true,
+          postId: true,
           post: {
-            include: {
-              category: true,
+            select: {
+              id: true,
+              category: {
+                select: {
+                  id: true,
+                  name: true,
+                  slug: true,
+                },
+              },
             },
           },
         },

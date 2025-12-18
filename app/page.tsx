@@ -22,7 +22,14 @@ export default async function Page() {
   const [merged, etcEventsRaw, lastRebuildLog] = await Promise.all([
     loadLiveData(),
     prisma.etcEvent.findMany({
+      select: {
+        id: true,
+        title: true,
+        datetime: true,
+        url: true,
+      },
       orderBy: { datetime: "asc" },
+      take: 100,
     }),
     prisma.rebuildLog.findFirst({
       where: { status: "success" },

@@ -20,10 +20,16 @@ interface PageProps {
   }>;
 }
 
-// ✅ Post + author + _count.comments 타입 명시
+// ✅ Post + author (select) + _count.comments 타입 명시
 type PostWithMeta = Prisma.PostGetPayload<{
   include: {
-    author: true;
+    author: {
+      select: {
+        id: true;
+        name: true;
+        email: true;
+      };
+    };
     _count: {
       select: {
         comments: true;
@@ -72,13 +78,20 @@ export default async function BoardPage({ params, searchParams }: PageProps) {
       ? [{ isPinned: "desc" }, { createdAt: "desc" }]
       : { createdAt: "desc" },
     include: {
-      author: true,
+      author: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
       _count: {
         select: {
           comments: true,
         },
       },
     },
+    take: 50,
   });
 
   return (
