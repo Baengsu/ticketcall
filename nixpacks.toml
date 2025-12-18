@@ -1,8 +1,14 @@
 [phases.install]
-cmds = ["npm ci"]
+cmds = ["npm ci --include=optional"]
 
 [phases.build]
-cmds = ["npm run build", "npx prisma generate"]
+cmds = [
+  "npx prisma generate",
+  "npm run build"
+]
+
+[phases.deploy]
+cmds = ["npx prisma migrate deploy"]
 
 [start]
 cmd = "npm start"

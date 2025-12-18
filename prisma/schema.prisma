@@ -8,30 +8,32 @@ generator client {
   provider = "prisma-client-js"
 }
 
-/* -------------------- Auth (NextAuth + 커스텀) -------------------- */
+/**
+ * -------------------- Auth (NextAuth + 커스텀) --------------------
+ */
 
 model User {
-  id            String   @id @default(cuid())
-  username      String?  @unique  // 로그인용 아이디
-  nickname      String?  @unique  // 표시용 닉네임
+  id            String    @id @default(cuid())
+  username      String?   @unique // 로그인용 아이디
+  nickname      String?   @unique // 표시용 닉네임
   name          String?
-  email         String?  @unique
+  email         String?   @unique
   emailVerified DateTime?
   image         String?
-  passwordHash  String?    // 자체 회원가입용 비밀번호 해시
-  role          String   @default("user")
+  passwordHash  String? // 자체 회원가입용 비밀번호 해시
+  role          String    @default("user")
 
-  isDisabled Boolean  @default(false)  // 계정 정지 여부
+  isDisabled Boolean   @default(false) // 계정 정지 여부
   bannedAt   DateTime?
   banReason  String?
 
-  accounts Account[]
-  sessions Session[]
-  posts    Post[]
-  comments Comment[]
+  accounts      Account[]
+  sessions      Session[]
+  posts         Post[]
+  comments      Comment[]
   reports       Report[]
   notifications Notification[]
-  etcEvents EtcEvent[]
+  etcEvents     EtcEvent[]
   favorites     Favorite[]
 }
 
@@ -71,83 +73,85 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-/* -------------------- 게시판 관련 모델 -------------------- */
+/**
+ * -------------------- 게시판 관련 모델 --------------------
+ */
 
 model BoardCategory {
   id        Int      @id @default(autoincrement())
-  slug      String   @unique    // "notice", "suggest" 이런 식
+  slug      String   @unique // "notice", "suggest" 이런 식
   name      String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  posts     Post[]
+  posts Post[]
 }
 
 model Post {
-  id         Int      @id @default(autoincrement())
-  title      String
-  content    String
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id        Int      @id @default(autoincrement())
+  title     String
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   categoryId Int
   authorId   String
 
-  isPinned   Boolean  @default(false)
-  isHidden   Boolean  @default(false)
-  viewCount  Int      @default(0)  // 조회수
+  isPinned  Boolean @default(false)
+  isHidden  Boolean @default(false)
+  viewCount Int     @default(0) // 조회수
 
   // 🔥 관리자 공식 답변
-  adminReply     String?
+  adminReply     String?   @db.Text
   adminRepliedAt DateTime?
 
-  category   BoardCategory @relation(fields: [categoryId], references: [id])
-  author     User          @relation(fields: [authorId], references: [id])
-  comments   Comment[]
-  reports    Report[]
+  category BoardCategory @relation(fields: [categoryId], references: [id])
+  author   User          @relation(fields: [authorId], references: [id])
+  comments Comment[]
+  reports  Report[]
 }
 
 model Comment {
   id        Int      @id @default(autoincrement())
-  content   String
+  content   String   @db.Text
   createdAt DateTime @default(now())
 
   postId   Int
   authorId String
 
-  post     Post @relation(fields: [postId], references: [id], onDelete: Cascade)
-  author   User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  post   Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
 }
 
 model RebuildLog {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())
-  status    String   // "success" | "error" 같은 값
-  message   String   // 요약 메시지 (예: "YES 120건, Melon 98건 통합 완료")
-  userEmail String?  // 누가 눌렀는지 (관리자 이메일)
+  status    String // "success" | "error" 같은 값
+  message   String   @db.Text // 요약 메시지 (예: "YES 120건, Melon 98건 통합 완료")
+  userEmail String? // 누가 눌렀는지 (관리자 이메일)
 }
 
 model Report {
-  id         String   @id @default(cuid())
-  createdAt  DateTime @default(now())
-  status     String   @default("pending") // "pending" | "resolved" | "ignored"
-  reason     String?
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  status    String   @default("pending") // "pending" | "resolved" | "ignored"
+  reason    String?  @db.Text
 
-  targetType String   // "post" (나중에 "comment"도 추가 가능)
+  targetType String // "post" (나중에 "comment"도 추가 가능)
   postId     Int?
 
   reporterId String?
-  reporter   User?    @relation(fields: [reporterId], references: [id])
+  reporter   User?   @relation(fields: [reporterId], references: [id])
 
-  post       Post?    @relation(fields: [postId], references: [id])
+  post Post? @relation(fields: [postId], references: [id])
 }
 
 model Notification {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())
   userId    String
-  type      String   // "suggest_replied", "comment_replied" 등
-  message   String
+  type      String // "suggest_replied", "comment_replied" 등
+  message   String   @db.Text
   read      Boolean  @default(false)
 
   user User @relation(fields: [userId], references: [id])
@@ -160,7 +164,7 @@ model EtcEvent {
   datetime  DateTime
   place     String?
   url       String?
-  memo      String?
+  memo      String?  @db.Text
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -170,7 +174,7 @@ model EtcEvent {
 model Favorite {
   id        String   @id @default(cuid())
   userId    String
-  eventId   String   // 공연 ID (예: "yes-123", "etc-456")
+  eventId   String // 공연 ID (예: "yes-123", "etc-456")
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
