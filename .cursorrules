@@ -4,3 +4,12 @@
 - Do not change existing folder structure without asking
 - Explain risky changes before applying
 - Always answer in Korean
+
+When writing or editing code that includes Korean (Hangul) comments or strings:
+
+- Always use UTF-8 encoding (without BOM).
+- Do NOT change file encoding to EUC-KR, CP949, or other encodings.
+- Assume all source files (.ts, .tsx, .js, .jsx, .json, .md) are UTF-8.
+- Preserve existing Korean comments exactly; do not re-encode or replace characters.
+- If a file appears corrupted, rewrite the Korean text explicitly in UTF-8 rather than copying garbled text.
+- Never output escaped Unicode sequences (e.g. \uD55C\uAE00) for Korean text; write Hangul directly.
