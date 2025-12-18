@@ -1,30 +1,8 @@
-# Nixpacks configuration for Railway
-# This ensures Railway uses the correct build settings
-
-# 환경 변수 설정
-[variables]
-NPM_CONFIG_CACHE = "/root/.npm"
-
-[phases.setup]
-nixPkgs = ["nodejs-20", "npm"]
-# NPM 캐시를 /root/.npm으로 설정하여 node_modules/.cache 충돌 방지
-cmds = [
-  "mkdir -p ${NPM_CONFIG_CACHE}",
-  "npm config set cache ${NPM_CONFIG_CACHE}"
-]
-
 [phases.install]
-cmds = [
-  "npm ci --include=optional",
-  "npx prisma generate"
-]
+cmds = ["npm ci"]
 
 [phases.build]
-# build 단계에서는 npm ci를 실행하지 않음 (install 단계에서 이미 실행됨)
-# 중복 실행 시 node_modules/.cache 잠금(EBUSY) 에러 방지
-cmds = [
-  "npm run build"
-]
+cmds = ["npm run build", "npx prisma generate"]
 
 [start]
 cmd = "npm start"
