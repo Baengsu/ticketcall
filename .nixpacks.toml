@@ -15,7 +15,7 @@ cmds = [
 
 [phases.install]
 cmds = [
-  "npm ci",
+  "npm ci --include=optional",
   "npx prisma generate"
 ]
 
