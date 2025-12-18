@@ -2,6 +2,10 @@
   "name": "ticketcall",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -37,7 +41,7 @@
     "@types/react-dom": "^19",
     "@types/xml2js": "^0.4.14",
     "eslint": "^9",
-    "eslint-config-next": "16.0.6",
+    "eslint-config-next": "16.0.10",
     "prisma": "^6.2.1",
     "tailwindcss": "^4",
     "typescript": "^5"

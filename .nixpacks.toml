@@ -1,0 +1,19 @@
+# Nixpacks configuration for Railway
+# This ensures Railway uses the correct build settings
+
+[phases.setup]
+nixPkgs = ["nodejs-20", "npm"]
+
+[phases.install]
+cmds = [
+  "npm ci",
+  "npx prisma generate"
+]
+
+[phases.build]
+cmds = [
+  "npm run build"
+]
+
+[start]
+cmd = "npm start"
