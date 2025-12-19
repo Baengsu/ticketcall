@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { sanitizeForStorage } from "@/lib/html-sanitize";
 
 const NOTICE_SLUG = "notice";
 // 건의사항 slug (목록/상세와 동일하게!)
@@ -33,14 +34,18 @@ export async function POST(req: Request, context: RouteContext) {
 
     const body = await req.json().catch(() => null);
     const title = body?.title?.trim?.() as string | undefined;
-    const content = body?.content?.trim?.() as string | undefined;
+    const rawContent = body?.content?.trim?.() as string | undefined;
 
-    if (!title || !content) {
+    if (!title || !rawContent) {
       return NextResponse.json(
         { ok: false, message: "제목과 내용을 모두 입력해 주세요." },
         { status: 400 }
       );
     }
+
+    // Sanitize HTML content before saving to database
+    // This prevents XSS attacks and ensures only safe HTML is stored
+    const content = sanitizeForStorage(rawContent);
 
     const category = await prisma.boardCategory.findUnique({
       where: { slug },
@@ -107,7 +112,10 @@ export async function PUT(req: Request, context: RouteContext) {
     const body = await req.json().catch(() => null);
     const postId = body?.postId as number | undefined;
     const title = body?.title?.trim?.() as string | undefined;
-    const content = body?.content?.trim?.() as string | undefined;
+    const rawContent = body?.content?.trim?.() as string | undefined;
+
+    // Sanitize HTML content before saving to database
+    const content = rawContent ? sanitizeForStorage(rawContent) : undefined;
 
     if (!postId || !Number.isFinite(postId)) {
       return NextResponse.json(

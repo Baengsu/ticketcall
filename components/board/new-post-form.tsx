@@ -5,6 +5,7 @@ import { useState, FormEvent, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import RichTextEditor from "./rich-text-editor";
+import { sanitizeForStorage } from "@/lib/html-sanitize";
 
 interface NewPostFormProps {
   slug: string;
@@ -111,13 +112,18 @@ export default function NewPostForm({
     try {
       const isEdit = mode === "edit";
 
+      // Sanitize HTML content before sending to server
+      // This provides an additional layer of security
+      // (Server will also sanitize, but defense in depth is best practice)
+      const sanitizedContent = sanitizeForStorage(content);
+
       const res = await fetch(`/api/board/${slug}/posts`, {
         method: isEdit ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(
           isEdit
-            ? { postId, title, content }
-            : { title, content }
+            ? { postId, title, content: sanitizedContent }
+            : { title, content: sanitizedContent }
         ),
       });
 

@@ -7,6 +7,7 @@ import Link from "@tiptap/extension-link";
 import Underline from "@tiptap/extension-underline";
 import { useEffect } from "react";
 import React from "react";
+import { sanitizeHtmlClient } from "@/lib/html-sanitize";
 
 interface RichTextEditorProps {
   content: string;
@@ -35,11 +36,56 @@ export default function RichTextEditor({
           target: "_blank",
           rel: "noopener noreferrer",
         },
+        // Validate URLs to prevent javascript: and data: protocols
+        validate: (url) => {
+          try {
+            const parsed = new URL(url, window.location.href);
+            // Only allow http, https, or relative URLs
+            return (
+              parsed.protocol === "http:" ||
+              parsed.protocol === "https:" ||
+              url.startsWith("/") ||
+              url.startsWith("#")
+            );
+          } catch {
+            // Invalid URL, reject
+            return false;
+          }
+        },
       }),
+      // ============================================
+      // FUTURE EXTENSIONS: Image and File Upload
+      // ============================================
+      // To add image upload support:
+      // 1. Install @tiptap/extension-image
+      // 2. Add Image extension here with upload handler:
+      //    Image.configure({
+      //      inline: true,
+      //      allowBase64: false, // Security: don't allow base64 images
+      //      HTMLAttributes: {
+      //        class: "max-w-full h-auto",
+      //      },
+      //    })
+      // 3. Add upload handler in toolbar (see toolbar section below)
+      // 4. Create API route: /api/board/upload-image
+      // 5. Update ALLOWED_TAGS in lib/html-sanitize.ts to include "img"
+      // 6. Update ALLOWED_ATTR to include "src", "alt", "width", "height"
+      //
+      // To add file upload support:
+      // 1. Create a custom TipTap extension for file attachments
+      // 2. Add file upload handler in toolbar
+      // 3. Create API route: /api/board/upload-file
+      // 4. Store file metadata in database (consider adding PostFile model)
+      // 5. Update sanitization to allow file links
+      // ============================================
     ],
     content,
     onUpdate: ({ editor }) => {
-      onChange(editor.getHTML());
+      // Sanitize HTML before passing to parent component
+      // This prevents script injection and ensures only safe HTML is stored
+      const rawHtml = editor.getHTML();
+      const sanitized = sanitizeHtmlClient(rawHtml);
+      onChange(sanitized);
     },
     editorProps: {
       attributes: {
@@ -227,6 +273,53 @@ export default function RichTextEditor({
             🔗✕
           </button>
         )}
+
+        {/* ============================================
+            FUTURE: Image Upload Button
+            ============================================
+            To add image upload:
+            1. Add button here:
+            <button
+              type="button"
+              onClick={async () => {
+                const input = document.createElement("input");
+                input.type = "file";
+                input.accept = "image/*";
+                input.onchange = async (e) => {
+                  const file = (e.target as HTMLInputElement).files?.[0];
+                  if (!file) return;
+                  
+                  // Upload to /api/board/upload-image
+                  const formData = new FormData();
+                  formData.append("image", file);
+                  const res = await fetch("/api/board/upload-image", {
+                    method: "POST",
+                    body: formData,
+                  });
+                  const { url } = await res.json();
+                  
+                  // Insert image into editor
+                  editor.chain().focus().setImage({ src: url }).run();
+                };
+                input.click();
+              }}
+              className="..."
+            >
+              🖼️
+            </button>
+            2. Ensure Image extension is added to extensions array above
+            3. Update sanitization to allow img tags
+            ============================================ */}
+
+        {/* ============================================
+            FUTURE: File Upload Button
+            ============================================
+            To add file upload:
+            1. Add button here similar to image upload
+            2. Create custom extension or use existing file extension
+            3. Store file metadata and insert link/icon
+            4. Update sanitization accordingly
+            ============================================ */}
       </div>
 
       {/* Editor Content */}

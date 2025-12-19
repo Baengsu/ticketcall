@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import DOMPurify from "dompurify";
+import { sanitizeHtmlClient, ALLOWED_TAGS, ALLOWED_ATTR } from "@/lib/html-sanitize";
 
 interface PostContentProps {
   content: string;
@@ -14,31 +15,9 @@ export default function PostContent({ content, className = "" }: PostContentProp
 
   useEffect(() => {
     setIsClient(true);
-    // Sanitize HTML on client side
-    const clean = DOMPurify.sanitize(content, {
-      ALLOWED_TAGS: [
-        "p",
-        "br",
-        "strong",
-        "em",
-        "u",
-        "ul",
-        "ol",
-        "li",
-        "a",
-        "h1",
-        "h2",
-        "h3",
-        "h4",
-        "h5",
-        "h6",
-        "blockquote",
-        "code",
-        "pre",
-      ],
-      ALLOWED_ATTR: ["href", "target", "rel"],
-      ALLOW_DATA_ATTR: false,
-    });
+    // Sanitize HTML on client side using centralized configuration
+    // This ensures consistent sanitization rules across the app
+    const clean = sanitizeHtmlClient(content);
     setSanitizedHtml(clean);
   }, [content]);
 
