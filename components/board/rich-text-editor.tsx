@@ -5,7 +5,7 @@ import StarterKit from "@tiptap/starter-kit";
 import TextAlign from "@tiptap/extension-text-align";
 import Link from "@tiptap/extension-link";
 import Underline from "@tiptap/extension-underline";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import React from "react";
 import { sanitizeHtmlClient } from "@/lib/html-sanitize";
 
@@ -22,7 +22,15 @@ export default function RichTextEditor({
   placeholder = "내용을 입력하세요...",
   hasError = false,
 }: RichTextEditorProps) {
+  // Client-only mount gate to prevent SSR hydration errors
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   const editor = useEditor({
+    immediatelyRender: false, // Prevent SSR hydration mismatch
     extensions: [
       StarterKit,
       Underline,
@@ -101,7 +109,7 @@ export default function RichTextEditor({
   const lastContentRef = React.useRef<string | null>(null);
   
   useEffect(() => {
-    if (!editor) return;
+    if (!editor || !isMounted) return;
     
     const currentHtml = editor.getHTML();
     // Only update if content prop actually changed
@@ -117,7 +125,29 @@ export default function RichTextEditor({
         lastContentRef.current = content;
       }
     }
-  }, [editor, content]);
+  }, [editor, content, isMounted]);
+
+  // Return skeleton placeholder during SSR to avoid hydration mismatch
+  if (!isMounted) {
+    return (
+      <div
+        className={`w-full border rounded-md focus-within:ring focus-within:ring-primary/40 ${
+          hasError ? "border-red-500 focus-within:ring-red-500/40" : ""
+        }`}
+      >
+        <div className="border-b p-2 flex flex-wrap gap-1 bg-muted/30 rounded-t-md">
+          <div className="h-8 w-8 bg-muted rounded-md animate-pulse" />
+          <div className="h-8 w-8 bg-muted rounded-md animate-pulse" />
+          <div className="h-8 w-8 bg-muted rounded-md animate-pulse" />
+        </div>
+        <div className="w-full px-3 py-2 text-sm min-h-[200px] bg-muted/20 animate-pulse">
+          <div className="h-4 bg-muted rounded w-3/4 mb-2" />
+          <div className="h-4 bg-muted rounded w-full mb-2" />
+          <div className="h-4 bg-muted rounded w-5/6" />
+        </div>
+      </div>
+    );
+  }
 
   if (!editor) {
     return (
