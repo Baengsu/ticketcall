@@ -4,6 +4,7 @@
 import { useState, FormEvent, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import RichTextEditor from "./rich-text-editor";
 
 interface NewPostFormProps {
   slug: string;
@@ -102,10 +103,10 @@ export default function NewPostForm({
 
       <div className="space-y-1">
         <label className="text-sm font-medium">내용</label>
-        <textarea
-          className="w-full border rounded-md px-3 py-2 text-sm min-h-[160px] resize-y focus:outline-none focus:ring focus:ring-primary/40"
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
+        <RichTextEditor
+          content={content}
+          onChange={(html) => setContent(html)}
+          placeholder="내용을 입력하세요..."
         />
       </div>
 

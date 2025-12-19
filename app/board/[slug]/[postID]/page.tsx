@@ -7,6 +7,7 @@ import { authOptions } from "@/lib/auth";
 import CommentsClient, {
   CommentItem,
 } from "@/components/board/comments-client";
+import PostContent from "@/components/board/post-content";
 
 const NOTICE_SLUG = "notice";
 // 🔥 건의사항 slug: /board/free 기준
@@ -307,8 +308,8 @@ export default async function PostDetailPage({ params }: PageProps) {
       </header>
 
       {/* 본문 */}
-      <section className="border rounded-md p-4 whitespace-pre-wrap text-sm leading-relaxed space-y-4">
-        <div>{post.content}</div>
+      <section className="border rounded-md p-4 text-sm leading-relaxed space-y-4">
+        <PostContent content={post.content} />
 
         {/* 🔥 건의사항 + 관리자 답변이 있는 경우, 답변 박스 */}
         {isSuggest && hasAdminReply && (
