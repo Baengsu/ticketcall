@@ -4,8 +4,31 @@
 import { useState, FormEvent, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import RichTextEditor from "./rich-text-editor";
+import dynamic from "next/dynamic";
 import { sanitizeForStorage } from "@/lib/html-sanitize";
+
+// Dynamically import RichTextEditor with SSR disabled to prevent hydration errors
+// This provides an additional layer of protection beyond the component's internal mount gate
+const RichTextEditor = dynamic(
+  () => import("./rich-text-editor"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="w-full border rounded-md">
+        <div className="border-b p-2 flex flex-wrap gap-1 bg-muted/30 rounded-t-md">
+          <div className="h-8 w-8 bg-muted rounded-md animate-pulse" />
+          <div className="h-8 w-8 bg-muted rounded-md animate-pulse" />
+          <div className="h-8 w-8 bg-muted rounded-md animate-pulse" />
+        </div>
+        <div className="w-full px-3 py-2 text-sm min-h-[200px] bg-muted/20 animate-pulse">
+          <div className="h-4 bg-muted rounded w-3/4 mb-2" />
+          <div className="h-4 bg-muted rounded w-full mb-2" />
+          <div className="h-4 bg-muted rounded w-5/6" />
+        </div>
+      </div>
+    ),
+  }
+);
 
 interface NewPostFormProps {
   slug: string;
