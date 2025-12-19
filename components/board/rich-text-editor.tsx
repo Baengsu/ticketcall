@@ -30,7 +30,10 @@ export default function RichTextEditor({
   }, []);
 
   const editor = useEditor({
-    immediatelyRender: false, // Prevent SSR hydration mismatch
+    // Prevent Next.js SSR hydration mismatch by deferring editor initialization
+    // until after client-side mount. This works together with the isMounted gate
+    // and next/dynamic import to ensure the editor never renders during SSR.
+    immediatelyRender: false,
     extensions: [
       StarterKit,
       Underline,
