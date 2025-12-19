@@ -15,8 +15,10 @@ export const authOptions: NextAuthOptions = {
   // NextAuth secret (필수, Railway 환경 변수에서 설정)
   secret: process.env.NEXTAUTH_SECRET,
 
-  // NextAuth v4는 NEXTAUTH_URL 환경 변수를 자동으로 사용하여 호스트 신뢰
+  // Railway/프로덕션 환경에서 프록시 뒤 호스트 신뢰
+  // NextAuth v4는 NEXTAUTH_URL 환경 변수를 사용하여 호스트를 결정
   // Railway에서 NEXTAUTH_URL을 설정하면 자동으로 프록시 환경 처리됨
+  // 참고: NextAuth v4에는 trustHost 옵션이 없음 (v5에서 추가됨)
 
   // JWT 전략: 낮은 트래픽 개인 앱에 최적화
   // - DB 쿼리 없이 빠른 인증

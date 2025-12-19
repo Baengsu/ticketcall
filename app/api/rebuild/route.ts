@@ -31,10 +31,35 @@ async function handleRebuild(req: Request) {
   let userRole: string | null = null;
 
   if (!isCronRequest) {
+    // Railway 환경 변수 확인
+    const nextAuthUrl = process.env.NEXTAUTH_URL_INTERNAL || process.env.NEXTAUTH_URL;
+    console.log("[Rebuild] Environment check", {
+      hasNEXTAUTH_URL: !!process.env.NEXTAUTH_URL,
+      hasNEXTAUTH_URL_INTERNAL: !!process.env.NEXTAUTH_URL_INTERNAL,
+      nextAuthUrl,
+      requestUrl: req.url,
+      headers: {
+        host: req.headers.get("host"),
+        "x-forwarded-host": req.headers.get("x-forwarded-host"),
+        "x-forwarded-proto": req.headers.get("x-forwarded-proto"),
+      },
+    });
+
     const session = await getServerSession(authOptions);
 
+    console.log("[Rebuild] Session check", {
+      hasSession: !!session,
+      hasUser: !!session?.user,
+      userEmail: session?.user?.email,
+      userId: (session?.user as any)?.id,
+      userRole: (session?.user as any)?.role,
+    });
+
     if (!session?.user?.email) {
-      console.log("[Rebuild] Unauthorized: No session");
+      console.log("[Rebuild] Unauthorized: No session", {
+        sessionExists: !!session,
+        userExists: !!session?.user,
+      });
       return NextResponse.json(
         { ok: false, error: "로그인이 필요합니다." },
         { status: 401 }
@@ -45,7 +70,7 @@ async function handleRebuild(req: Request) {
     userId = (session.user as any)?.id ?? null;
     userRole = (session.user as any)?.role ?? null;
 
-    console.log("[Rebuild] User check", {
+    console.log("[Rebuild] User authenticated", {
       email: userEmail,
       userId,
       role: userRole,
