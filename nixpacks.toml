@@ -16,16 +16,12 @@ cmds = [
 [start]
 # Railway/Nixpacks start command 강제 지정
 # 
-# 현재 설정 (개발/초기 배포용):
+# 프로덕션 시작 명령어:
 # - db push: 스키마 동기화 (테이블 생성, 데이터 손실 허용)
 # - db seed: 기본 데이터 생성 (게시판 카테고리: notice, free)
-# 
-# 프로덕션 안전 설정 (마이그레이션 사용):
-# cmd = "npx prisma migrate deploy && npm start"
-# 
-# 주의: migrate deploy는 기존 마이그레이션 파일이 있어야 함
-#       초기 배포 후에는 migrate deploy로 전환 권장
+# - npm start: Next.js 프로덕션 서버 시작
 #
+# ⚠️ migrate 명령어는 사용하지 않음 (P3018 embedded null 오류 방지)
 # Railway가 자동으로 포트를 할당함
 # 빌드 단계에서는 절대 migrate 실행하지 않음 (P1001 오류 방지)
 cmd = "npx prisma db push --accept-data-loss && npx prisma db seed && npm start"
