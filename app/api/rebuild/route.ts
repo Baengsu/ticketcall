@@ -31,34 +31,27 @@ async function handleRebuild(req: Request) {
   let userRole: string | null = null;
 
   if (!isCronRequest) {
-    // Railway 환경 변수 확인
-    const nextAuthUrl = process.env.NEXTAUTH_URL_INTERNAL || process.env.NEXTAUTH_URL;
-    console.log("[Rebuild] Environment check", {
-      hasNEXTAUTH_URL: !!process.env.NEXTAUTH_URL,
-      hasNEXTAUTH_URL_INTERNAL: !!process.env.NEXTAUTH_URL_INTERNAL,
-      nextAuthUrl,
-      requestUrl: req.url,
-      headers: {
-        host: req.headers.get("host"),
-        "x-forwarded-host": req.headers.get("x-forwarded-host"),
-        "x-forwarded-proto": req.headers.get("x-forwarded-proto"),
-      },
-    });
-
     const session = await getServerSession(authOptions);
 
     console.log("[Rebuild] Session check", {
       hasSession: !!session,
       hasUser: !!session?.user,
-      userEmail: session?.user?.email,
       userId: (session?.user as any)?.id,
       userRole: (session?.user as any)?.role,
+      userEmail: (session?.user as any)?.email,
     });
 
-    if (!session?.user?.email) {
-      console.log("[Rebuild] Unauthorized: No session", {
+    // JWT 전략에서는 email이 null일 수 있으므로 userId로 인증 확인
+    userId = (session?.user as any)?.id ?? null;
+    userRole = (session?.user as any)?.role ?? null;
+    userEmail = (session?.user as any)?.email ?? null;
+
+    // 401: 세션이 없거나 userId가 없을 때만
+    if (!session || !session.user || !userId) {
+      console.log("[Rebuild] Unauthorized: Missing session or userId", {
         sessionExists: !!session,
         userExists: !!session?.user,
+        userId,
       });
       return NextResponse.json(
         { ok: false, error: "로그인이 필요합니다." },
@@ -66,24 +59,13 @@ async function handleRebuild(req: Request) {
       );
     }
 
-    userEmail = session.user.email;
-    userId = (session.user as any)?.id ?? null;
-    userRole = (session.user as any)?.role ?? null;
-
-    console.log("[Rebuild] User authenticated", {
-      email: userEmail,
-      userId,
-      role: userRole,
-    });
-
-    const user = await prisma.user.findUnique({
-      where: { email: userEmail },
-    });
-
-    if (!user || user.role !== "admin") {
+    // 403: role이 admin이 아닐 때 (case-insensitive 비교)
+    const normalizedRole = userRole?.toLowerCase() ?? "";
+    if (normalizedRole !== "admin") {
       console.log("[Rebuild] Forbidden: Not admin", {
-        userExists: !!user,
-        userRole: user?.role,
+        userId,
+        userRole,
+        normalizedRole,
       });
       return NextResponse.json(
         { ok: false, error: "관리자만 실행할 수 있습니다." },
@@ -92,9 +74,9 @@ async function handleRebuild(req: Request) {
     }
 
     console.log("[Rebuild] Authorized admin user", {
-      userId: user.id,
-      email: user.email,
-      role: user.role,
+      userId,
+      userEmail,
+      userRole,
     });
   } else {
     // 크론에서 호출한 경우, 로그에 남길 시스템 계정 표시
