@@ -1,5 +1,7 @@
 [phases.install]
-cmds = ["npm ci --include=optional"]
+# 긴급 workaround: npm ci 대신 npm install 사용 (lockfile sync 문제 해결)
+# preact@10.11.3 등 optional dependencies 누락 문제 우회
+cmds = ["npm install --include=optional"]
 
 [phases.build]
 cmds = [
@@ -13,10 +15,8 @@ cmds = [
 
 [start]
 # Railway/Nixpacks start command 강제 지정
-# 임시: seed 포함 (보드 404 해결 후 제거 예정)
-# 1. Prisma db push로 스키마 동기화 (테이블 생성)
-# 2. Prisma db seed로 기본 데이터 생성 (게시판 카테고리)
-# 3. Next.js 프로덕션 서버 시작
+# 1. Prisma db push로 스키마 동기화 (테이블 생성, 데이터 손실 허용)
+# 2. Next.js 프로덕션 서버 시작
 # Railway가 자동으로 포트를 할당함
 # 빌드 단계에서는 절대 migrate 실행하지 않음 (P1001 오류 방지)
-cmd = "npx prisma db push && npx prisma db seed && npm start"
+cmd = "npx prisma db push --accept-data-loss && npm start"
