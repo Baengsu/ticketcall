@@ -13,8 +13,10 @@ cmds = [
 
 [start]
 # Railway/Nixpacks start command 강제 지정
-# 1. Prisma migrate deploy로 마이그레이션 적용 (테이블 생성/업데이트)
-# 2. Next.js 프로덕션 서버 시작
+# 임시: seed 포함 (보드 404 해결 후 제거 예정)
+# 1. Prisma db push로 스키마 동기화 (테이블 생성)
+# 2. Prisma db seed로 기본 데이터 생성 (게시판 카테고리)
+# 3. Next.js 프로덕션 서버 시작
 # Railway가 자동으로 포트를 할당함
 # 빌드 단계에서는 절대 migrate 실행하지 않음 (P1001 오류 방지)
-cmd = "npx prisma migrate deploy && npm start"
+cmd = "npx prisma db push && npx prisma db seed && npm start"
