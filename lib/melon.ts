@@ -128,21 +128,29 @@ function parseMelonList($: cheerio.Root, pageIndex: string) {
 export async function crawlMelon(): Promise<SiteDataset> {
   const allRows: any[] = [];
 
-  // 멜론은 pageIndex 1, 11, 21, 31 ... 이런 식으로 넘어감
+  // 멜론은 pageIndex 1, 11, 21, 31 ... 이런 식으로 넘어감 (API 동작 방식)
   // 👉 1페이지, 2페이지까지만 크롤링
   const pageIndexes = ["1", "11"];
+  let totalRows = 0;
 
   for (const idx of pageIndexes) {
     try {
-      console.log("[melon] 페이지 크롤링:", idx);
+      // pageIndex를 실제 페이지 번호로 변환 (1 -> 1페이지, 11 -> 2페이지)
+      const pageNumber = pageIndexes.indexOf(idx) + 1;
+      console.log(`[melon] 크롤링 시작: pageIndex=${idx} (페이지 ${pageNumber})`);
+      
       const $ = await fetchMelonPage(idx);
       const rows = parseMelonList($, idx);
-      console.log("[melon] 파싱된 행 수:", idx, rows.length);
+      totalRows += rows.length;
+      
+      console.log(`[melon] 크롤링 완료: pageIndex=${idx} (페이지 ${pageNumber}), 파싱된 항목=${rows.length}개`);
       allRows.push(...rows);
     } catch (err) {
-      console.error("[melon] fetch/parse 실패:", idx, err);
+      console.error(`[melon] 크롤링 실패: pageIndex=${idx}`, err);
     }
   }
+
+  console.log(`[melon] 전체 크롤링 완료: 총 ${totalRows}개 항목 수집`);
 
   return {
     id: "melon",

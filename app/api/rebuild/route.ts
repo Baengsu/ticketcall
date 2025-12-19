@@ -9,9 +9,16 @@ import { buildMergedData, saveMergedData } from "@/lib/aggregate";
 // 크론(자동 스케줄러)에서도 호출할 수 있도록,
 // 헤더에 비밀 키가 있을 때는 세션/관리자 체크를 생략하고 시스템 계정으로 처리합니다.
 async function handleRebuild(req: Request) {
+  // Public URL 추론 (Railway/proxy 환경 대응)
+  const forwardedHost = req.headers.get("x-forwarded-host");
+  const forwardedProto = req.headers.get("x-forwarded-proto") || "https";
+  const publicUrl = forwardedHost
+    ? `${forwardedProto}://${forwardedHost}`
+    : null;
+
   console.log("[Rebuild] Request received", {
     method: req.method,
-    url: req.url,
+    publicUrl: publicUrl || "N/A (direct/internal)",
     timestamp: new Date().toISOString(),
   });
 
