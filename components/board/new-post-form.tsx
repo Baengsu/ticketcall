@@ -1,11 +1,15 @@
 // components/board/new-post-form.tsx
 "use client";
 
-import { useState, FormEvent, useEffect } from "react";
+import { useState, FormEvent, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import dynamic from "next/dynamic";
-import { sanitizeForStorage } from "@/lib/html-sanitize";
+// HTML sanitization is done on render, not on save
+
+// TEMPORARY: Debug flag to trace HTML content
+// Set to false to disable debug logging
+const DEBUG_HTML_TRACE = false;
 
 // Dynamically import RichTextEditor with SSR disabled to prevent hydration errors
 // This provides an additional layer of protection beyond the component's internal mount gate
@@ -49,7 +53,8 @@ export default function NewPostForm({
   const { data: session, status } = useSession();
 
   const [title, setTitle] = useState(initialTitle ?? "");
-  const [content, setContent] = useState(initialContent ?? "");
+  // Store editor content in ref to avoid re-renders on every keystroke
+  const contentRef = useRef<string>(initialContent ?? "");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [titleError, setTitleError] = useState<string | null>(null);
@@ -62,9 +67,10 @@ export default function NewPostForm({
     }
   }, [initialTitle]);
 
+  // Update ref when initialContent changes (for edit mode)
   useEffect(() => {
     if (initialContent !== undefined) {
-      setContent(initialContent);
+      contentRef.current = initialContent;
     }
   }, [initialContent]);
 
@@ -116,9 +122,12 @@ export default function NewPostForm({
     setTitleError(null);
     setContentError(null);
 
+    // Read content from ref (not state) to avoid re-render issues
+    const currentContent = contentRef.current;
+
     // 개별 필드 검증
     const titleErr = validateTitle(title);
-    const contentErr = validateContent(content);
+    const contentErr = validateContent(currentContent);
 
     if (titleErr) {
       setTitleError(titleErr);
@@ -135,18 +144,34 @@ export default function NewPostForm({
     try {
       const isEdit = mode === "edit";
 
-      // Sanitize HTML content before sending to server
-      // This provides an additional layer of security
-      // (Server will also sanitize, but defense in depth is best practice)
-      const sanitizedContent = sanitizeForStorage(content);
+      // Debug: Log HTML content right before sending to server
+      if (DEBUG_HTML_TRACE) {
+        console.group(`[Client] ${isEdit ? "PUT" : "POST"} - Content before save`);
+        console.log("Content length:", currentContent.length);
+        console.log("Content preview (first 200 chars):", currentContent.substring(0, 200));
+        console.log("Full content:", currentContent);
+        
+        // Check for malformed HTML
+        const openTags = (currentContent.match(/<[^/][^>]*>/g) || []).length;
+        const closeTags = (currentContent.match(/<\/[^>]+>/g) || []).length;
+        if (openTags !== closeTags) {
+          console.warn(`⚠️ Tag mismatch: ${openTags} open tags, ${closeTags} close tags`);
+        }
+        if (/<p[^>]*>[\s\S]*?<p[^>]*>/i.test(currentContent)) {
+          console.warn("⚠️ Nested <p> tags detected");
+        }
+        console.groupEnd();
+      }
 
+      // Send raw HTML content - no sanitization or manipulation
+      // Sanitization is done on render, not on save
       const res = await fetch(`/api/board/${slug}/posts`, {
         method: isEdit ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(
           isEdit
-            ? { postId, title, content: sanitizedContent }
-            : { title, content: sanitizedContent }
+            ? { postId, title, content: currentContent }
+            : { title, content: currentContent }
         ),
       });
 
@@ -200,9 +225,11 @@ export default function NewPostForm({
           내용 <span className="text-red-500">*</span>
         </label>
         <RichTextEditor
-          content={content}
+          content={initialContent ?? ""}
           onChange={(html) => {
-            setContent(html);
+            // Update ref only - do NOT set state to avoid re-renders
+            contentRef.current = html;
+            // Clear error if there was one
             if (contentError) setContentError(null);
           }}
           placeholder="내용을 입력하세요..."

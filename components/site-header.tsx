@@ -197,6 +197,13 @@ export default function SiteHeader() {
                 </button>
               )}
 
+              <a
+                href="/messages"
+                className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-medium hover:bg-blue-700 transition-colors"
+              >
+                메시지
+              </a>
+
               <button
                 onClick={() => signOut({ callbackUrl: "/" })}
                 className="px-3 py-1.5 rounded-lg border hover:bg-muted text-xs font-medium transition-colors"

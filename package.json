@@ -11,7 +11,15 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "cron:local": "node scripts/local-cron.js"
+    "cron:local": "node scripts/local-cron.js",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:push": "prisma db push --accept-data-loss",
+    "prisma:reset": "prisma migrate reset",
+    "prisma:studio": "prisma studio",
+    "db:setup": "prisma generate && prisma db push --accept-data-loss && prisma db seed",
+    "clean:next": "rm -rf .next || rmdir /s /q .next 2>nul || true",
+    "dev:clean": "npm run clean:next && npm run prisma:generate && npm run dev"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",
@@ -20,25 +28,34 @@
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-popover": "^1.1.15",
     "@radix-ui/react-tabs": "^1.1.13",
+    "@tanstack/react-virtual": "^3.13.13",
+    "@tiptap/extension-bullet-list": "^3.14.0",
+    "@tiptap/extension-color": "^3.14.0",
+    "@tiptap/extension-image": "^3.14.0",
     "@tiptap/extension-link": "^3.14.0",
+    "@tiptap/extension-list-item": "^3.14.0",
+    "@tiptap/extension-ordered-list": "^3.14.0",
     "@tiptap/extension-text-align": "^3.14.0",
+    "@tiptap/extension-text-style": "^3.14.0",
     "@tiptap/extension-underline": "^3.14.0",
     "@tiptap/react": "^3.14.0",
     "@tiptap/starter-kit": "^3.14.0",
     "@types/dompurify": "^3.0.5",
     "bcrypt": "^6.0.0",
+    "browser-image-compression": "^2.0.2",
     "cheerio": "^1.1.2",
     "class-variance-authority": "^0.7.1",
     "dompurify": "^3.3.1",
     "ioredis": "^5.8.2",
     "lucide-react": "^0.561.0",
-    "next": "^16.0.10",
+    "next": "^15.4.5",
     "next-auth": "^4.24.13",
     "next-themes": "^0.4.6",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "tailwind-merge": "^3.4.0",
-    "xml2js": "^0.6.2"
+    "xml2js": "^0.6.2",
+    "zod": "^4.2.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -54,5 +71,8 @@
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
     "typescript": "^5"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   }
 }

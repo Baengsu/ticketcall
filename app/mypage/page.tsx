@@ -4,6 +4,10 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import NotificationsList from "@/components/mypage/notifications-list";
+import { getNicknameStyleFromPoints } from "@/lib/points";
+import { getUserAchievements } from "@/lib/achievements";
+import AchievementsList from "@/components/achievements/achievements-list";
+import { getLevel, getLevelProgress } from "@/lib/level";
 
 const SUGGEST_SLUG = "free";
 const DONE_PREFIX = "[완료] ";
@@ -33,6 +37,21 @@ export default async function MyPage() {
   const userEmail = user.email as string | undefined;
   const role = (user.role as string | undefined) ?? "user";
   const isAdmin = role === "admin";
+
+  // 사용자 정보 조회 (닉네임 스타일링을 위해 포인트 포함)
+  const userData = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      name: true,
+      points: true,
+      equippedIcon: {
+        select: {
+          iconKey: true,
+          source: true,
+        },
+      },
+    },
+  });
 
   // 🔔 최근 알림 가져오기 (최신 50개)
   const recentNotifications = await prisma.notification.findMany({
@@ -95,6 +114,9 @@ export default async function MyPage() {
   const doneSuggest = doneSuggestPosts.length;
   const pendingSuggest = pendingSuggestPosts.length;
 
+  // 사용자 성취 계산
+  const achievements = await getUserAchievements(userId);
+
   return (
     <main className="container mx-auto py-8 px-4 max-w-6xl">
       <div className="space-y-8">
@@ -120,8 +142,23 @@ export default async function MyPage() {
                 <span className="text-2xl">👤</span>
               </div>
               <div className="flex-1">
-                <p className="font-semibold text-base">
-                  {userEmail ?? "알 수 없음"}
+                <p
+                  className={`font-semibold text-base ${
+                    userData?.points !== undefined
+                      ? getNicknameStyleFromPoints(userData.points)
+                      : ""
+                  }`}
+                >
+                  <span className="flex items-center gap-1.5">
+                    {userData?.equippedIcon && (
+                      <NicknameIcon
+                        iconKey={userData.equippedIcon.iconKey}
+                        source={userData.equippedIcon.source}
+                        className="flex-shrink-0"
+                      />
+                    )}
+                    {userData?.name ?? userEmail ?? "알 수 없음"}
+                  </span>
                 </p>
                 <div className="flex items-center gap-2 mt-1">
                   <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
@@ -134,7 +171,72 @@ export default async function MyPage() {
                 </div>
               </div>
             </div>
+
+            {/* 레벨 및 포인트 정보 */}
+            {userData?.points !== undefined && (
+              <div className="mt-4 pt-4 border-t space-y-3">
+                {(() => {
+                  const userPoints = userData.points;
+                  const level = getLevel(userPoints);
+                  const progress = getLevelProgress(userPoints);
+                  
+                  return (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">레벨</span>
+                        <span className="text-lg font-bold">Lv.{level}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">포인트</span>
+                        <span className="text-lg font-semibold">{userPoints.toLocaleString()}</span>
+                      </div>
+                      {progress.nextLevelPoints !== null ? (
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between text-xs text-muted-foreground">
+                            <span>다음 레벨까지</span>
+                            <span>{progress.nextLevelPoints - progress.currentPoints} 포인트 남음</span>
+                          </div>
+                          <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                            <div
+                              className="h-full bg-gradient-to-r from-blue-500 to-purple-600 transition-all duration-300"
+                              style={{ width: `${progress.progressPercent}%` }}
+                            />
+                          </div>
+                          <div className="flex items-center justify-between text-xs text-muted-foreground">
+                            <span>Lv.{level} → Lv.{level + 1}</span>
+                            <span>{progress.progressPercent.toFixed(1)}%</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-xs text-muted-foreground text-center py-1">
+                          최대 레벨 달성! 🎉
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
+              </div>
+            )}
           </div>
+        </section>
+
+        {/* 🏆 성취 목록 */}
+        <section>
+          <div className="mb-6">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg">
+                <span className="text-xl">🏆</span>
+              </div>
+              <h2 className="text-2xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 text-transparent bg-clip-text">
+                성취
+              </h2>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              달성한 성취를 확인할 수 있습니다. ({achievements.length}개 달성)
+            </p>
+          </div>
+
+          <AchievementsList achievements={achievements} />
         </section>
 
       {/* 🔔 최근 알림 */}

@@ -64,7 +64,7 @@ export default async function AdminUserDetailPage({ params }: PageProps) {
     redirect(`/admin/users/${userId}`);
   }
 
-  // 🔧 게시글 삭제 서버 액션
+  // 🔧 게시글 삭제 서버 액션 (소프트 삭제)
   async function deletePostAction(formData: FormData) {
     "use server";
 
@@ -74,14 +74,21 @@ export default async function AdminUserDetailPage({ params }: PageProps) {
       redirect(`/admin/users/${userId}`);
     }
 
-    await prisma.post.delete({
+    // 소프트 삭제 (숨김 처리)
+    const now = new Date();
+    await prisma.post.update({
       where: { id: postId },
+      data: {
+        isHidden: true,
+        hiddenAt: now,
+        hiddenReason: "관리자에 의한 삭제",
+      },
     });
 
     redirect(`/admin/users/${userId}`);
   }
 
-  // 🔧 댓글 삭제 서버 액션
+  // 🔧 댓글 삭제 서버 액션 (소프트 삭제)
   async function deleteCommentAction(formData: FormData) {
     "use server";
 
@@ -91,8 +98,84 @@ export default async function AdminUserDetailPage({ params }: PageProps) {
       redirect(`/admin/users/${userId}`);
     }
 
-    await prisma.comment.delete({
+    // 소프트 삭제 (숨김 처리)
+    const now = new Date();
+    await prisma.comment.update({
       where: { id: commentId },
+      data: {
+        isHidden: true,
+        hiddenAt: now,
+        hiddenReason: "관리자에 의한 삭제",
+      },
+    });
+
+    redirect(`/admin/users/${userId}`);
+  }
+
+  // 🔧 메시지 전송 차단/해제 서버 액션
+  async function blockMessageSending(formData: FormData) {
+    "use server";
+
+    const targetId = String(formData.get("userId") ?? "");
+    const blockedUntilStr = String(formData.get("blockedUntil") ?? "");
+    const reason = String(formData.get("reason") ?? "");
+
+    if (!targetId) {
+      redirect(`/admin/users/${userId}`);
+    }
+
+    const session = await getServerSession(authOptions);
+    const admin = session?.user as any | undefined;
+    if (!admin || admin.role !== "admin") {
+      redirect(`/admin/users/${userId}`);
+    }
+
+    const adminId = admin.id as string;
+
+    let blockedUntil: Date | null = null;
+    if (blockedUntilStr) {
+      blockedUntil = new Date(blockedUntilStr);
+      if (isNaN(blockedUntil.getTime())) {
+        redirect(`/admin/users/${userId}`);
+      }
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // 기존 차단 상태 조회
+      const targetUser = await tx.user.findUnique({
+        where: { id: targetId },
+        select: { messageBlockedUntil: true },
+      });
+
+      if (!targetUser) {
+        return;
+      }
+
+      const oldBlockedUntil = targetUser.messageBlockedUntil;
+
+      // 차단 시간 업데이트
+      await tx.user.update({
+        where: { id: targetId },
+        data: { messageBlockedUntil: blockedUntil },
+      });
+
+      // AdminActionLog 기록
+      const actionType = blockedUntil ? "BLOCK_MESSAGE_SENDING" : "UNBLOCK_MESSAGE_SENDING";
+      await tx.adminActionLog.create({
+        data: {
+          adminId,
+          actionType,
+          targetType: "USER",
+          targetId,
+          reason: reason.trim() || (blockedUntil ? "메시지 전송 일시 차단" : "메시지 전송 차단 해제"),
+          oldValue: JSON.stringify({
+            messageBlockedUntil: oldBlockedUntil?.toISOString() || null,
+          }),
+          newValue: JSON.stringify({
+            messageBlockedUntil: blockedUntil?.toISOString() || null,
+          }),
+        },
+      });
     });
 
     redirect(`/admin/users/${userId}`);
@@ -109,6 +192,7 @@ export default async function AdminUserDetailPage({ params }: PageProps) {
       isDisabled: true,
       bannedAt: true,
       banReason: true,
+      messageBlockedUntil: true,
       posts: {
         select: {
           id: true,
@@ -214,6 +298,67 @@ export default async function AdminUserDetailPage({ params }: PageProps) {
               사유: {user.banReason}
             </div>
           )}
+          {user.messageBlockedUntil && (
+            <div className="text-[11px] text-red-600">
+              메시지 차단: {user.messageBlockedUntil.toLocaleString("ko-KR", {
+                timeZone: "Asia/Seoul",
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit",
+              })}까지
+            </div>
+          )}
+
+          {/* 🔥 메시지 전송 차단 / 해제 */}
+          <div className="pt-3 space-y-2">
+            <h3 className="text-xs font-semibold text-muted-foreground">메시지 전송 제어</h3>
+            {user.messageBlockedUntil ? (
+              <form action={blockMessageSending} className="space-y-2">
+                <input type="hidden" name="userId" value={user.id} />
+                <input type="hidden" name="blockedUntil" value="" />
+                <input type="hidden" name="reason" value="관리자에 의한 차단 해제" />
+                <button
+                  type="submit"
+                  className="px-3 py-1 rounded-md bg-blue-600 text-white text-xs hover:bg-blue-700"
+                >
+                  메시지 전송 차단 해제
+                </button>
+              </form>
+            ) : (
+              <form action={blockMessageSending} className="space-y-2">
+                <input type="hidden" name="userId" value={user.id} />
+                <div className="flex gap-2 items-end">
+                  <div className="flex-1">
+                    <label htmlFor="blockedUntil" className="block text-[10px] text-muted-foreground mb-1">
+                      차단 종료 시간
+                    </label>
+                    <input
+                      type="datetime-local"
+                      id="blockedUntil"
+                      name="blockedUntil"
+                      required
+                      className="w-full px-2 py-1 border rounded text-xs"
+                      min={new Date().toISOString().slice(0, 16)}
+                    />
+                  </div>
+                  <input
+                    type="text"
+                    name="reason"
+                    placeholder="사유 (선택)"
+                    className="flex-1 px-2 py-1 border rounded text-xs"
+                  />
+                  <button
+                    type="submit"
+                    className="px-3 py-1 rounded-md bg-red-600 text-white text-xs hover:bg-red-700"
+                  >
+                    차단
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
 
           {/* 🔥 계정 정지 / 해제 버튼 */}
           <div className="pt-3 flex gap-2 text-xs">

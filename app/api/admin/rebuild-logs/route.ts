@@ -1,16 +1,28 @@
-import { NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
+// 25.4.3 app/api/admin/rebuild-logs/route.ts
+import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/admin";
+import { ok, fail } from "@/lib/api-response";
+import { z } from "zod";
+import { parseSearchParams } from "@/lib/zod-shared";
 
-export async function GET() {
-  try {
-    const logs = await prisma.rebuildLog.findMany({
-      orderBy: { createdAt: "desc" },
-      take: 20,
-    });
+const QuerySchema = z.object({
+  limit: z.coerce.number().int().min(20).max(200).optional().default(50),
+});
 
-    return NextResponse.json({ logs });
-  } catch (error) {
-    console.error("Error fetching rebuild logs", error);
-    return NextResponse.json({ logs: [] }, { status: 500 });
-  }
+export async function GET(req: Request) {
+  const gate = await requireAdmin();
+  if (!gate.ok) return fail(gate.status === 401 ? "Unauthorized" : "Forbidden", gate.status);
+
+  const q = parseSearchParams(req);
+  const parsed = QuerySchema.safeParse(q);
+  if (!parsed.success) return fail("Invalid query", 400);
+
+  const { limit } = parsed.data;
+
+  const items = await prisma.rebuildLog.findMany({
+    orderBy: { createdAt: "desc" },
+    take: limit,
+  });
+
+  return ok({ items, limit });
 }

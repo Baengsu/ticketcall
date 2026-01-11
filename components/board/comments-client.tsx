@@ -2,10 +2,18 @@
 "use client";
 
 import { useState, FormEvent } from "react";
+import { getNicknameStyleFromPoints } from "@/lib/points";
+import UserBadge from "./user-badge";
+import LevelBadge from "./level-badge";
+import NicknameIcon from "@/components/icons/NicknameIcon";
+import CommentVoteButtons from "@/components/board/comment-vote-buttons";
+import type { BadgesMap } from "@/lib/badges";
 
 interface CommentAuthor {
   id: string;
   name: string | null;
+  points?: number;
+  equippedIcon?: { iconKey: string; source: string } | null;
 }
 
 export interface CommentItem {
@@ -14,6 +22,10 @@ export interface CommentItem {
   createdAt: string; // ISO string
   authorId: string;
   author: CommentAuthor | null;
+  voteUp?: number;
+  voteDown?: number;
+  voteScore?: number;
+  myVote?: number;
 }
 
 interface CommentsClientProps {
@@ -23,6 +35,8 @@ interface CommentsClientProps {
   currentUserId?: string;
   currentUserRole?: string;
   initialComments: CommentItem[];
+  badgesMap?: BadgesMap; // 사용자 ID -> 배지 목록 맵
+  canHide?: boolean; // 댓글 숨김 권한 (관리자 또는 Lv.5+)
 }
 
 export default function CommentsClient({
@@ -32,6 +46,8 @@ export default function CommentsClient({
   currentUserId,
   currentUserRole,
   initialComments,
+  badgesMap = {},
+  canHide = false,
 }: CommentsClientProps) {
   const [comments, setComments] = useState<CommentItem[]>(initialComments);
   const [newContent, setNewContent] = useState("");
@@ -83,6 +99,31 @@ export default function CommentsClient({
       setErrorMsg(err.message ?? "알 수 없는 오류가 발생했습니다.");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleHide = async (commentId: number) => {
+    setErrorMsg(null);
+    try {
+      const res = await fetch("/api/admin/hide", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          targetType: "COMMENT",
+          targetId: commentId,
+          reason: "댓글 숨김 처리",
+        }),
+      });
+
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.ok) {
+        throw new Error(data?.message ?? "댓글 숨김 처리에 실패했습니다.");
+      }
+
+      // 성공 시 페이지 새로고침 (서버 컴포넌트에서 다시 로드)
+      window.location.reload();
+    } catch (err: any) {
+      setErrorMsg(err.message ?? "알 수 없는 오류가 발생했습니다.");
     }
   };
 
@@ -169,7 +210,30 @@ export default function CommentsClient({
                 className="border rounded-md p-3 text-sm space-y-1"
               >
                 <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>{c.author?.name ?? "익명"}</span>
+                  <span className="flex items-center gap-1.5">
+                    {c.author?.equippedIcon && (
+                      <NicknameIcon
+                        iconKey={c.author.equippedIcon.iconKey}
+                        source={c.author.equippedIcon.source}
+                        className="flex-shrink-0"
+                      />
+                    )}
+                    <span
+                      className={
+                        c.author?.points !== undefined
+                          ? getNicknameStyleFromPoints(c.author.points)
+                          : ""
+                      }
+                    >
+                      {c.author?.name ?? "익명"}
+                    </span>
+                    {c.author?.points !== undefined && (
+                      <LevelBadge points={c.author.points} />
+                    )}
+                    {c.author?.id && badgesMap[c.author.id] && (
+                      <UserBadge badges={badgesMap[c.author.id]} />
+                    )}
+                  </span>
                   <span>
                     {new Date(c.createdAt).toLocaleString("ko-KR", {
                       timeZone: "Asia/Seoul",
@@ -211,24 +275,44 @@ export default function CommentsClient({
                 ) : (
                   <>
                     <p className="whitespace-pre-wrap pt-1">{c.content}</p>
-                    {canEditDelete && (
-                      <div className="flex gap-2 pt-1 text-xs">
-                        <button
-                          type="button"
-                          onClick={() => startEdit(c)}
-                          className="px-2 py-1 rounded bg-blue-500 text-white"
-                        >
-                          수정
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(c.id)}
-                          className="px-2 py-1 rounded bg-red-500 text-white"
-                        >
-                          삭제
-                        </button>
+                    <div className="flex items-center justify-between pt-1">
+                      <CommentVoteButtons
+                        commentId={c.id}
+                        initialUp={c.voteUp ?? 0}
+                        initialDown={c.voteDown ?? 0}
+                        initialScore={c.voteScore ?? 0}
+                        initialMyVote={c.myVote ?? 0}
+                      />
+                      <div className="flex gap-2 text-xs">
+                        {canEditDelete && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => startEdit(c)}
+                              className="px-2 py-1 rounded bg-blue-500 text-white"
+                            >
+                              수정
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(c.id)}
+                              className="px-2 py-1 rounded bg-red-500 text-white"
+                            >
+                              삭제
+                            </button>
+                          </>
+                        )}
+                        {canHide && !canEditDelete && (
+                          <button
+                            type="button"
+                            onClick={() => handleHide(c.id)}
+                            className="px-2 py-1 rounded bg-gray-600 text-white"
+                          >
+                            숨기기
+                          </button>
+                        )}
                       </div>
-                    )}
+                    </div>
                   </>
                 )}
               </li>

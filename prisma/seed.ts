@@ -1,5 +1,6 @@
 // prisma/seed.ts
 import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcrypt";
 
 const prisma = new PrismaClient();
 
@@ -18,6 +19,7 @@ async function main() {
     create: {
       slug: "notice",
       name: "공지사항",
+      minPostLevel: 1,
     },
   });
   console.log(`✓ Created/Updated board: ${notice.slug} (${notice.name})`);
@@ -31,9 +33,47 @@ async function main() {
     create: {
       slug: "free",
       name: "건의사항",
+      minPostLevel: 1,
     },
   });
   console.log(`✓ Created/Updated board: ${suggest.slug} (${suggest.name})`);
+
+  // Admin 사용자 생성 (선택적)
+  console.log("👤 Checking admin user...");
+  const adminEmail = process.env.ADMIN_EMAIL || "admin@example.com";
+  const adminPassword = process.env.ADMIN_PASSWORD || "admin123";
+  const adminUsername = process.env.ADMIN_USERNAME || "admin";
+  const adminNickname = process.env.ADMIN_NICKNAME || "관리자";
+
+  const existingAdmin = await prisma.user.findFirst({
+    where: {
+      OR: [
+        { email: adminEmail },
+        { username: adminUsername },
+        { role: "admin" },
+      ],
+    },
+  });
+
+  if (!existingAdmin) {
+    const hashedPassword = await bcrypt.hash(adminPassword, 10);
+    const admin = await prisma.user.create({
+      data: {
+        username: adminUsername,
+        nickname: adminNickname,
+        name: adminNickname,
+        email: adminEmail,
+        passwordHash: hashedPassword,
+        role: "admin",
+        points: 0,
+      },
+    });
+    console.log(`✓ Created admin user: ${admin.username} (${admin.email})`);
+    console.log(`  Default password: ${adminPassword}`);
+    console.log(`  ⚠️  Please change the password after first login!`);
+  } else {
+    console.log(`✓ Admin user already exists: ${existingAdmin.email || existingAdmin.username}`);
+  }
 
   console.log("✅ Database seed completed successfully!");
 }

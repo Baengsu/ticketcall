@@ -3,6 +3,8 @@ import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcrypt";
 import prisma from "./prisma";
+import { giveDailyLoginPoints } from "./points";
+import { isAdminRole } from "@/lib/role";
 
 // Railway/프로덕션 환경 변수 검증
 if (process.env.NODE_ENV === "production" && !process.env.NEXTAUTH_SECRET) {
@@ -88,13 +90,17 @@ export const authOptions: NextAuthOptions = {
 
           if (!ok) return null;
 
+          const userRole = user.role?.toUpperCase() ?? "USER";
+          const isAdmin = userRole === "ADMIN";
+          
           return {
             id: user.id,
             name: user.nickname ?? user.name ?? null,
             email: user.email ?? null,
             nickname: user.nickname ?? null,
             username: user.username ?? null,
-            role: user.role ?? "user",
+            role: userRole,
+            isAdmin: isAdmin,
             isDisabled: user.isDisabled ?? false,
           } as any;
         } catch (err: any) {
@@ -114,25 +120,62 @@ export const authOptions: NextAuthOptions = {
   },
 
   callbacks: {
+    async signIn({ user }) {
+      // 로그인 성공 시 일일 로그인 포인트 지급
+      if (user?.id) {
+        try {
+          await giveDailyLoginPoints(user.id as string);
+        } catch (err) {
+          // 포인트 지급 실패해도 로그인은 허용 (에러 로그만 기록)
+          console.error("[Auth] Failed to give daily login points:", err);
+        }
+      }
+      return true;
+    },
     async jwt({ token, user }) {
+      // When user signs in, user.id exists (or user has sub).
+      const userId = (user as any)?.id ?? (token as any)?.sub ?? token.sub;
+
+      // Store user id in token (NextAuth uses token.sub but we ensure it)
+      if (userId && !token.sub) token.sub = String(userId);
+
+      // Refresh role from DB occasionally (dev-friendly: 10s; prod: 60~300s)
+      const REFRESH_MS = 10 * 1000;
+      const now = Date.now();
+      const last = Number((token as any).roleUpdatedAt ?? 0);
+
+      if (!token.sub) return token;
+
+      if (!(token as any).role || now - last > REFRESH_MS) {
+        const u = await prisma.user.findUnique({
+          where: { id: String(token.sub) },
+          select: { role: true },
+        });
+        const role = u?.role ?? "user";
+
+        (token as any).role = role;
+        (token as any).isAdmin = isAdminRole(role);
+        (token as any).roleUpdatedAt = now;
+      }
+
+      // Preserve other token fields
       if (user) {
-        token.id = (user as any).id;
-        token.role = (user as any).role ?? "user";
-        token.nickname = (user as any).nickname ?? null;
-        token.username = (user as any).username ?? null;
+        (token as any).id = (user as any).id ?? (token as any).id;
+        (token as any).nickname = (user as any).nickname ?? null;
+        (token as any).username = (user as any).username ?? null;
         (token as any).isDisabled = (user as any).isDisabled ?? false;
       }
+
       return token;
     },
     async session({ session, token }) {
-      if (session.user) {
-        (session.user as any).id = token.id;
-        (session.user as any).role = (token as any).role ?? "user";
-        (session.user as any).nickname = (token as any).nickname ?? null;
-        (session.user as any).username = (token as any).username ?? null;
-        (session.user as any).isDisabled =
-          (token as any).isDisabled ?? false;
-      }
+      // Attach id/role/isAdmin to session.user
+      (session.user as any).id = token.sub;
+      (session.user as any).role = (token as any).role ?? "user";
+      (session.user as any).isAdmin = Boolean((token as any).isAdmin);
+      (session.user as any).nickname = (token as any).nickname ?? null;
+      (session.user as any).username = (token as any).username ?? null;
+      (session.user as any).isDisabled = (token as any).isDisabled ?? false;
       return session;
     },
     // Railway/프로덕션 환경에서 redirect URL 안전성 보장

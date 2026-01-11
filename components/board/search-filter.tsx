@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 
 type PostItem = {
@@ -41,7 +41,7 @@ export default function SearchFilter({
   }, [posts, searchQuery]);
 
   // 부모 컴포넌트에 필터링된 결과 전달
-  useMemo(() => {
+  useEffect(() => {
     if (onFilteredPostsChange) {
       onFilteredPostsChange(filteredPosts);
     }

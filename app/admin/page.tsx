@@ -80,7 +80,12 @@ export default function AdminPage() {
       try {
         const res = await fetch("/api/admin/posts-summary");
         if (!res.ok) {
-          console.error("Failed to fetch posts summary");
+          const errorData = await res.json().catch(() => ({}));
+          console.error("Failed to fetch posts summary", {
+            status: res.status,
+            statusText: res.statusText,
+            message: errorData.message || "알 수 없는 오류가 발생했습니다.",
+          });
           return;
         }
         const data = await res.json();
@@ -328,6 +333,18 @@ export default function AdminPage() {
           className="px-4 py-2 rounded-lg border hover:bg-muted transition-colors text-sm font-medium"
         >
           🚨 신고 관리
+        </a>
+        <a
+          href="/admin/messages/reports"
+          className="px-4 py-2 rounded-lg border hover:bg-muted transition-colors text-sm font-medium"
+        >
+          💬 메시지 신고 관리
+        </a>
+        <a
+          href="/admin/vote-stats"
+          className="px-4 py-2 rounded-lg border hover:bg-muted transition-colors text-sm font-medium"
+        >
+          📊 Vote Stats
         </a>
       </section>
 

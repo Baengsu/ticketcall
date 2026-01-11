@@ -5,6 +5,9 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { redirect } from "next/navigation";
+import { getLevel } from "@/lib/level";
+import UserPointsAdjust from "@/components/admin/user-points-adjust";
+import BoardLevelAdjust from "@/components/admin/board-level-adjust";
 
 export default async function AdminUsersPage() {
   const session = await getServerSession(authOptions);
@@ -17,11 +20,17 @@ export default async function AdminUsersPage() {
 
   const currentUserId = currentUser.id as string;
 
-  // 전체 유저 + 관리자 수 카운트
-  const [users, adminCount] = await Promise.all([
+  // 전체 유저 + 관리자 수 카운트 + 게시판 목록
+  const [users, adminCount, boards] = await Promise.all([
     prisma.user.findMany({
       orderBy: { email: "asc" },
-      include: {
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        nickname: true,
+        role: true,
+        points: true,
         _count: {
           select: {
             posts: true,
@@ -32,6 +41,15 @@ export default async function AdminUsersPage() {
     }),
     prisma.user.count({
       where: { role: "admin" },
+    }),
+    prisma.boardCategory.findMany({
+      orderBy: { createdAt: "asc" },
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+        minPostLevel: true,
+      },
     }),
   ]);
 
@@ -87,17 +105,22 @@ export default async function AdminUsersPage() {
                 <th className="px-3 py-2 text-left w-40">이메일</th>
                 <th className="px-3 py-2 text-left w-32">이름</th>
                 <th className="px-3 py-2 text-left w-28">권한</th>
+                <th className="px-3 py-2 text-left w-24">포인트</th>
+                <th className="px-3 py-2 text-left w-20">레벨</th>
                 <th className="px-3 py-2 text-left w-40">활동</th>
                 <th className="px-3 py-2 text-left w-32">상태</th>
                 <th className="px-3 py-2 text-left w-32">권한 변경</th>
+                <th className="px-3 py-2 text-left w-48">포인트 조정</th>
               </tr>
             </thead>
              <tbody>
-               {users.map((u: typeof users[0], index: number) => {
+               {users.map((u, index: number) => {
                 const isCurrent = u.id === currentUserId;
                 const isAdmin = u.role === "admin";
-                const postCount = (u as any)._count?.posts ?? 0;
-                const commentCount = (u as any)._count?.comments ?? 0;
+                const postCount = u._count?.posts ?? 0;
+                const commentCount = u._count?.comments ?? 0;
+                const userPoints = u.points ?? 0;
+                const userLevel = getLevel(userPoints);
 
                 return (
                   <tr key={u.id} className="border-t align-top">
@@ -116,7 +139,7 @@ export default async function AdminUsersPage() {
                     </td>
                     <td className="px-3 py-2 align-top">
                       <div className="text-[12px]">
-                        {u.name ?? "이름 없음"}
+                        {u.name ?? u.nickname ?? "이름 없음"}
                       </div>
                     </td>
                     <td className="px-3 py-2 align-top">
@@ -129,6 +152,14 @@ export default async function AdminUsersPage() {
                         }
                       >
                         {isAdmin ? "관리자" : "일반 사용자"}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2 align-top text-[12px] font-semibold">
+                      {userPoints}
+                    </td>
+                    <td className="px-3 py-2 align-top">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 text-[11px] font-semibold">
+                        Lv.{userLevel}
                       </span>
                     </td>
                     {/* 🔥 활동: 글/댓글 수 + 활동 상세 보기 링크 */}
@@ -181,11 +212,53 @@ export default async function AdminUsersPage() {
                         </button>
                       </form>
                     </td>
+                    <td className="px-3 py-2 align-top">
+                      <UserPointsAdjust
+                        userId={u.id}
+                        userName={u.name ?? u.nickname ?? u.email ?? "사용자"}
+                        currentPoints={userPoints}
+                      />
+                    </td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
+        )}
+      </section>
+
+      {/* 게시판 레벨 설정 */}
+      <section className="border rounded-lg overflow-hidden">
+        <div className="border-b px-3 py-2 bg-muted/60 flex items-center justify-between">
+          <span className="text-sm font-medium">게시판 최소 레벨 설정</span>
+        </div>
+        {boards.length === 0 ? (
+          <div className="p-4 text-sm text-muted-foreground">
+            게시판이 없습니다.
+          </div>
+        ) : (
+          <div className="divide-y">
+            {boards.map((board) => (
+              <div
+                key={board.id}
+                className="p-4 flex items-center justify-between gap-4"
+              >
+                <div className="flex-1">
+                  <div className="font-medium text-sm">{board.name}</div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    slug: {board.slug} · 현재 최소 레벨: Lv.{board.minPostLevel}
+                  </div>
+                </div>
+                <div className="w-64">
+                  <BoardLevelAdjust
+                    boardId={board.id}
+                    boardName={board.name}
+                    currentLevel={board.minPostLevel}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </section>
     </main>

@@ -8,17 +8,72 @@ type StoreEntry = {
 };
 
 const memoryStore = new Map<string, StoreEntry>();
+const memoryCounters = new Map<string, { value: number; expiresAt: number }>();
 
 const memoryRedis = {
-  // ttlSeconds 가 있으면 EX 기반으로 만료되게 흉내냄
-  async set(key: string, value: string, ttlSeconds?: number) {
-    let expiresAt = Infinity;
+  // Supports:
+  // - set(key, value)
+  // - set(key, value, ttlSeconds:number)               (legacy)
+  // - set(key, value, "EX", seconds)
+  // - set(key, value, "NX", "EX", seconds)
+  // - set(key, value, "EX", seconds, "NX")
+  async set(key: string, value: string, ...args: any[]): Promise<"OK" | null> {
+    const now = Date.now();
 
-    if (typeof ttlSeconds === "number") {
-      expiresAt = Date.now() + ttlSeconds * 1000;
+    // clear expired existing key
+    const existing = memoryStore.get(key);
+    if (existing && existing.expiresAt !== Infinity && existing.expiresAt <= now) {
+      memoryStore.delete(key);
     }
 
+    let nx = false;
+    let exSeconds: number | undefined;
+
+    // legacy: (ttlSeconds?: number)
+    if (args.length === 1 && typeof args[0] === "number") {
+      exSeconds = args[0];
+    } else if (args.length > 0) {
+      const tokens = args.map((a) => (typeof a === "string" ? a.toUpperCase() : a));
+
+      for (let i = 0; i < tokens.length; i++) {
+        const t = tokens[i];
+        if (t === "NX") nx = true;
+        if (t === "EX" && typeof tokens[i + 1] === "number") {
+          exSeconds = tokens[i + 1];
+          i += 1;
+        }
+      }
+    }
+
+    if (nx) {
+      const alive = memoryStore.get(key);
+      if (alive && (alive.expiresAt === Infinity || alive.expiresAt > now)) {
+        return null;
+      }
+    }
+
+    const expiresAt =
+      typeof exSeconds === "number" ? now + exSeconds * 1000 : Infinity;
+
     memoryStore.set(key, { value, expiresAt });
+    return "OK";
+  },
+
+  async get(key: string): Promise<string | null> {
+    const now = Date.now();
+    const entry = memoryStore.get(key);
+
+    if (!entry) {
+      return null;
+    }
+
+    // 만료된 키는 삭제하고 null 반환
+    if (entry.expiresAt <= now) {
+      memoryStore.delete(key);
+      return null;
+    }
+
+    return entry.value;
   },
 
   async keys(pattern: string) {
@@ -39,6 +94,71 @@ const memoryRedis = {
 
     return result;
   },
+
+  async incr(key: string): Promise<number> {
+    const now = Date.now();
+    const counter = memoryCounters.get(key);
+
+    if (!counter || counter.expiresAt <= now) {
+      memoryCounters.set(key, { value: 1, expiresAt: Infinity });
+      return 1;
+    }
+
+    counter.value += 1;
+    return counter.value;
+  },
+
+  async expire(key: string, seconds: number): Promise<number> {
+    const expiresAt = Date.now() + seconds * 1000;
+    
+    // memoryStore의 경우
+    const entry = memoryStore.get(key);
+    if (entry) {
+      entry.expiresAt = expiresAt;
+      return 1;
+    }
+
+    // memoryCounters의 경우
+    const counter = memoryCounters.get(key);
+    if (counter) {
+      counter.expiresAt = expiresAt;
+      return 1;
+    }
+
+    // 키가 없으면 0 반환
+    return 0;
+  },
+
+  async ttl(key: string): Promise<number> {
+    const now = Date.now();
+    
+    // memoryStore 확인
+    const entry = memoryStore.get(key);
+    if (entry && entry.expiresAt !== Infinity) {
+      const ttl = Math.ceil((entry.expiresAt - now) / 1000);
+      return ttl > 0 ? ttl : -2; // -2는 키가 없음을 의미
+    }
+
+    // memoryCounters 확인
+    const counter = memoryCounters.get(key);
+    if (counter && counter.expiresAt !== Infinity) {
+      const ttl = Math.ceil((counter.expiresAt - now) / 1000);
+      return ttl > 0 ? ttl : -2;
+    }
+
+    // 키가 없거나 만료 시간이 없으면 -1 (만료 시간 없음)
+    if (entry || counter) {
+      return -1;
+    }
+
+    return -2; // 키가 없음
+  },
+
+  async del(key: string): Promise<number> {
+    const existed = memoryStore.delete(key) ? 1 : 0;
+    memoryCounters.delete(key);
+    return existed;
+  },
 };
 
 // online:* 정도만 쓰는 간단한 패턴 매칭
@@ -53,8 +173,13 @@ function matchPattern(key: string, pattern: string) {
 
 // ----- 실제로 export 되는 redis 객체 선택 -----
 let redis: {
-  set: (key: string, value: string, ttlSeconds?: number) => Promise<void>;
+  set: (key: string, value: string, ...args: any[]) => Promise<"OK" | null>;
+  get: (key: string) => Promise<string | null>;
   keys: (pattern: string) => Promise<string[]>;
+  incr: (key: string) => Promise<number>;
+  expire: (key: string, seconds: number) => Promise<number>;
+  ttl: (key: string) => Promise<number>;
+  del: (key: string) => Promise<number>;
 };
 
 if (process.env.REDIS_URL) {
@@ -63,16 +188,26 @@ if (process.env.REDIS_URL) {
   const client = new Redis(process.env.REDIS_URL);
 
   redis = {
-    async set(key, value, ttlSeconds) {
-      if (typeof ttlSeconds === "number") {
-        // ioredis 시그니처: set(key, value, "EX", seconds)
-        await client.set(key, value, "EX", ttlSeconds);
-      } else {
-        await client.set(key, value);
-      }
+    async set(key, value, ...args) {
+      return client.set(key, value, ...args);
+    },
+    async get(key) {
+      return client.get(key);
     },
     async keys(pattern) {
       return client.keys(pattern);
+    },
+    async incr(key) {
+      return client.incr(key);
+    },
+    async expire(key, seconds) {
+      return client.expire(key, seconds);
+    },
+    async ttl(key) {
+      return client.ttl(key);
+    },
+    async del(key) {
+      return client.del(key);
     },
   };
 } else {

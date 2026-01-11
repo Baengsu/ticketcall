@@ -2,6 +2,9 @@
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  // Shadow database for safe migrations (optional)
+  // Uncomment if you have created a shadow database:
+  // shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
 }
 
 generator client {
@@ -27,14 +30,33 @@ model User {
   bannedAt   DateTime?
   banReason  String?
 
-  accounts      Account[]
-  sessions      Session[]
-  posts         Post[]
-  comments      Comment[]
-  reports       Report[]
-  notifications Notification[]
-  etcEvents     EtcEvent[]
-  favorites     Favorite[]
+  messageBlockedUntil DateTime? // 메시지 전송 일시 차단 종료 시간
+
+  points            Int       @default(0) // 포인트
+  lastLogin         DateTime? // 마지막 로그인 시간
+  lastVoteAt        DateTime? // 마지막 투표 시간 (쿨다운 체크용)
+  lastMessageSentAt DateTime? // 마지막 메시지 전송 시간 (rate limiting 체크용)
+  equippedIconId    String? // 현재 장착한 아이콘 ID (한 번에 하나만 장착 가능)
+
+  accounts            Account[]
+  sessions            Session[]
+  posts               Post[]
+  comments            Comment[]
+  reports             Report[]
+  notifications       Notification[]
+  etcEvents           EtcEvent[]
+  favorites           Favorite[]
+  postVotes           PostVote[]
+  commentVotes        CommentVote[]
+  pointHistory        PointHistory[]
+  adminActions        AdminActionLog[]
+  sentMessages        Message[]               @relation("MessageSender")
+  receivedMessages    Message[]               @relation("MessageReceiver")
+  messageReports      MessageReport[]         @relation("MessageReporter")
+  messageBlockedUsers UserMessagePreference[] @relation("UserBlockedUsers")
+  blockedByUsers      UserMessagePreference[] @relation("BlockedByUsers")
+  ownedIcons          UserIconOwnership[]
+  equippedIcon        IconItem?               @relation("EquippedIcon", fields: [equippedIconId], references: [id])
 }
 
 model Account {
@@ -78,11 +100,12 @@ model VerificationToken {
  */
 
 model BoardCategory {
-  id        Int      @id @default(autoincrement())
-  slug      String   @unique // "notice", "suggest" 이런 식
-  name      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           Int      @id @default(autoincrement())
+  slug         String   @unique // "notice", "suggest" 이런 식
+  name         String
+  minPostLevel Int      @default(1) // 게시물 작성에 필요한 최소 레벨
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   posts Post[]
 }
@@ -97,9 +120,14 @@ model Post {
   categoryId Int
   authorId   String
 
-  isPinned  Boolean @default(false)
-  isHidden  Boolean @default(false)
-  viewCount Int     @default(0) // 조회수
+  isPinned     Boolean   @default(false)
+  isHidden     Boolean   @default(false)
+  hiddenAt     DateTime? // 소프트 삭제 시간
+  hiddenReason String?   @db.Text // 숨김 처리 이유
+  viewCount    Int       @default(0) // 조회수
+  upCount      Int       @default(0)
+  downCount    Int       @default(0)
+  voteScore    Int       @default(0) // upCount - downCount (maintained in code)
 
   // 🔥 관리자 공식 답변
   adminReply     String?   @db.Text
@@ -108,29 +136,39 @@ model Post {
   category BoardCategory @relation(fields: [categoryId], references: [id])
   author   User          @relation(fields: [authorId], references: [id])
   comments Comment[]
-  reports  Report[]
+  votes    PostVote[]
 
   @@index([categoryId])
   @@index([authorId])
   @@index([createdAt])
   @@index([isPinned, createdAt])
   @@index([isHidden])
+  @@index([hiddenAt])
 }
 
 model Comment {
-  id        Int      @id @default(autoincrement())
-  content   String   @db.Text
-  createdAt DateTime @default(now())
+  id           Int       @id @default(autoincrement())
+  content      String    @db.Text
+  createdAt    DateTime  @default(now())
+  isHidden     Boolean   @default(false) // 관리자에 의한 숨김 처리
+  hiddenAt     DateTime? // 소프트 삭제 시간
+  hiddenReason String?   @db.Text // 숨김 처리 이유
+  upCount      Int       @default(0)
+  downCount    Int       @default(0)
+  voteScore    Int       @default(0)
 
   postId   Int
   authorId String
 
-  post   Post @relation(fields: [postId], references: [id], onDelete: Cascade)
-  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  post   Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  votes  CommentVote[]
 
   @@index([postId])
   @@index([authorId])
   @@index([createdAt])
+  @@index([isHidden])
+  @@index([hiddenAt])
 }
 
 model RebuildLog {
@@ -148,19 +186,20 @@ model Report {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())
   status    String   @default("pending") // "pending" | "resolved" | "ignored"
-  reason    String?  @db.Text
+  reason    String   @db.Text // 신고 사유
 
-  targetType String // "post" (나중에 "comment"도 추가 가능)
-  postId     Int?
+  targetType String // "POST" 또는 "COMMENT"
+  targetId   Int // 게시물 ID 또는 댓글 ID
 
-  reporterId String?
-  reporter   User?   @relation(fields: [reporterId], references: [id])
+  reporterId String
+  reporter   User   @relation(fields: [reporterId], references: [id], onDelete: Cascade)
 
-  post Post? @relation(fields: [postId], references: [id])
-
+  // 한 사용자가 한 타겟에 대해 한 번만 신고 가능 (복합 유니크)
+  @@unique([reporterId, targetType, targetId])
   @@index([status])
   @@index([createdAt])
-  @@index([postId])
+  @@index([targetType, targetId])
+  @@index([reporterId])
 }
 
 model Notification {
@@ -176,6 +215,125 @@ model Notification {
   @@index([userId])
   @@index([userId, read])
   @@index([createdAt])
+}
+
+/**
+ * -------------------- 메시지 시스템 --------------------
+ * 사용자 간 1:1 메시지 시스템
+ * - 수신: 인증된 모든 사용자 가능 (레벨 제한 없음)
+ * - 전송: Lv.3 이상만 가능
+ * - 포인트 영향 없음
+ * - 모든 메시지는 저장되어 감사 가능
+ */
+model Message {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  title     String? // 메시지 제목 (선택적)
+  content   String   @db.Text // 메시지 내용
+  isRead    Boolean  @default(false) // 읽음 여부
+
+  threadId String // 대화 스레드 ID (같은 threadId = 같은 대화)
+
+  senderId   String
+  receiverId String
+
+  // 소프트 삭제 필드 (관리자 감사를 위해 메시지는 항상 보존)
+  deletedBySenderAt   DateTime? // 발신자가 삭제한 시간 (관리자는 항상 볼 수 있음)
+  deletedByReceiverAt DateTime? // 수신자가 삭제한 시간 (관리자는 항상 볼 수 있음)
+
+  sender      User                @relation("MessageSender", fields: [senderId], references: [id]) // Cascade 삭제 없음 - 감사용 보존
+  receiver    User                @relation("MessageReceiver", fields: [receiverId], references: [id]) // Cascade 삭제 없음 - 감사용 보존
+  reports     MessageReport[]
+  attachments MessageAttachment[]
+
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([receiverId, isRead])
+  @@index([createdAt])
+  @@index([senderId, receiverId])
+  @@index([threadId])
+  @@index([threadId, createdAt])
+  @@index([deletedBySenderAt])
+  @@index([deletedByReceiverAt])
+}
+
+model MessageAttachment {
+  id        String   @id @default(cuid())
+  messageId String
+  fileUrl   String // 파일 URL (예: /uploads/xxx.pdf)
+  fileName  String // 원본 파일명
+  fileSize  Int // 파일 크기 (bytes)
+  createdAt DateTime @default(now())
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+  @@index([createdAt])
+}
+
+model MessageReport {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  reason    String   @db.Text // 신고 사유
+
+  reporterId String
+  messageId  String
+
+  reporter User    @relation("MessageReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  message  Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  // 한 사용자가 한 메시지에 대해 한 번만 신고 가능
+  @@unique([reporterId, messageId])
+  @@index([messageId])
+  @@index([reporterId])
+  @@index([createdAt])
+}
+
+/**
+ * -------------------- 메시지 수신 설정 --------------------
+ * 사용자가 특정 사용자로부터 메시지 수신을 차단할 수 있습니다.
+ */
+model UserMessagePreference {
+  id            String   @id @default(cuid())
+  userId        String // 메시지를 차단하는 사용자
+  blockedUserId String // 차단당한 사용자
+  createdAt     DateTime @default(now())
+
+  user        User @relation("UserBlockedUsers", fields: [userId], references: [id], onDelete: Cascade)
+  blockedUser User @relation("BlockedByUsers", fields: [blockedUserId], references: [id], onDelete: Cascade)
+
+  // 한 사용자가 같은 사용자를 중복 차단할 수 없음
+  @@unique([userId, blockedUserId])
+  @@index([userId])
+  @@index([blockedUserId])
+  @@index([createdAt])
+}
+
+/**
+ * -------------------- 관리자 액션 로그 모델 --------------------
+ * 모든 관리자 액션은 로깅되어야 합니다.
+ * 누가(who), 언제(when), 무엇을(what), 왜(why) 기록합니다.
+ */
+model AdminActionLog {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  adminId String // 관리자 ID
+  admin   User   @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  actionType String // "HIDE_POST", "HIDE_COMMENT", "ADJUST_POINTS", "RESOLVE_REPORT" 등
+  targetType String? // "POST", "COMMENT", "USER" 등
+  targetId   String? // 타겟 ID (게시물 ID, 댓글 ID, 사용자 ID 등)
+  reason     String  @db.Text // 액션 이유 (필수)
+
+  // 변경 전/후 값 (선택적, JSON 형태로 저장 가능)
+  oldValue String? @db.Text // 변경 전 값 (JSON)
+  newValue String? @db.Text // 변경 후 값 (JSON)
+
+  @@index([adminId])
+  @@index([createdAt])
+  @@index([actionType])
+  @@index([targetType, targetId])
 }
 
 model EtcEvent {
@@ -205,4 +363,114 @@ model Favorite {
 
   @@unique([userId, eventId])
   @@index([userId])
+}
+
+/**
+ * -------------------- 투표 시스템 모델 --------------------
+ * 투표 정책:
+ * - 한 번 투표하면 변경할 수 없습니다.
+ * - 한 번 투표하면 취소할 수 없습니다.
+ * - 같은 게시물/댓글에 다시 투표하려는 시도는 거부됩니다.
+ * - 복합 기본 키(@@id)로 데이터베이스 레벨에서 중복 투표가 방지됩니다.
+ */
+
+model PostVote {
+  id        Int      @id @default(autoincrement())
+  postId    Int
+  userId    String
+  value     Int // 1 = upvote, -1 = downvote
+  createdAt DateTime @default(now())
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+}
+
+model CommentVote {
+  id        Int      @id @default(autoincrement())
+  commentId Int
+  userId    String
+  value     Int // 1 = upvote, -1 = downvote
+  createdAt DateTime @default(now())
+
+  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId])
+}
+
+/**
+ * -------------------- 포인트 히스토리 --------------------
+ */
+
+model PointHistory {
+  id        Int      @id @default(autoincrement())
+  userId    String // 포인트를 받은 사용자
+  amount    Int // 포인트 양 (양수 또는 음수)
+  reason    String // 포인트 변경 이유 (예: "POST_CREATE", "POST_UPVOTE", "ADMIN_ADJUST")
+  refId     String? // 참조 ID (postId 또는 commentId, 선택적)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([reason])
+}
+
+/**
+ * -------------------- 시즌 랭킹 시스템 --------------------
+ */
+
+model Season {
+  id        Int      @id @default(autoincrement())
+  name      String // 시즌 이름 (예: "2025 시즌 1", "여름 시즌")
+  startAt   DateTime // 시즌 시작 시간
+  endAt     DateTime // 시즌 종료 시간
+  isActive  Boolean  @default(false) // 현재 활성 시즌 여부
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([startAt])
+  @@index([endAt])
+}
+
+/**
+ * -------------------- 닉네임 아이콘 시스템 --------------------
+ */
+model IconItem {
+  id        String   @id @default(cuid())
+  name      String // 아이콘 이름 (예: "Phoenix Stage 1")
+  iconKey   String   @unique // 아이콘 키 (예: "phoenix_stage_1")
+  source    String   @default("custom") // 아이콘 소스 ("custom", "emoji" 등)
+  price     Int      @default(0) // 구매 가격 (포인트)
+  rarity    String   @default("common") // 희귀도 ("common", "rare", "epic", "legendary")
+  isLimited Boolean  @default(false) // 한정 아이콘 여부
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owners        UserIconOwnership[]
+  equippedUsers User[]              @relation("EquippedIcon")
+
+  @@index([iconKey])
+  @@index([source])
+  @@index([rarity])
+}
+
+model UserIconOwnership {
+  id        String   @id @default(cuid())
+  userId    String
+  iconId    String
+  createdAt DateTime @default(now())
+
+  user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  icon IconItem @relation(fields: [iconId], references: [id], onDelete: Cascade)
+
+  // 한 사용자가 같은 아이콘을 중복 소유할 수 없음
+  @@unique([userId, iconId])
+  @@index([userId])
+  @@index([iconId])
+  @@index([createdAt])
 }

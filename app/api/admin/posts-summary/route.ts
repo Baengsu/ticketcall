@@ -2,17 +2,14 @@
 // app/api/admin/posts-summary/route.ts
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireAdmin } from "@/lib/admin";
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  const user = session?.user as any | undefined;
-
-  if (!user?.email || user.role !== "admin") {
+  const gate = await requireAdmin();
+  if (!gate.ok) {
     return NextResponse.json(
-      { ok: false, message: "관리자만 접근할 수 있습니다." },
-      { status: 403 }
+      { error: gate.status === 401 ? "Unauthorized" : "Forbidden" },
+      { status: gate.status }
     );
   }
 

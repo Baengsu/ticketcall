@@ -20,8 +20,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TicketForum",
-  description: "공연 예매 오픈 캘린더 & 커뮤니티",
+  title: "티켓포럼",
+  description: "각종 공연 예매 오픈 캘린더 & 커뮤니티",
   icons: {
     icon: [
       { url: '/icon.png', sizes: '32x32', type: 'image/png' },
