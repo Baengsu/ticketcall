@@ -13,15 +13,6 @@ cmds = [
 # migrate deploy는 빌드 단계에서 실행되면 안 됨 (P1001 오류 발생)
 # migrate는 런타임 start 명령에서만 실행됨 (Railway Start Command 설정)
 
+# 31.2
 [start]
-# Railway/Nixpacks start command 강제 지정
-# 
-# 프로덕션 시작 명령어:
-# - db push: 스키마 동기화 (테이블 생성, 데이터 손실 허용)
-# - db seed: 기본 데이터 생성 (게시판 카테고리: notice, free)
-# - npm start: Next.js 프로덕션 서버 시작
-#
-# ⚠️ migrate 명령어는 사용하지 않음 (P3018 embedded null 오류 방지)
-# Railway가 자동으로 포트를 할당함
-# 빌드 단계에서는 절대 migrate 실행하지 않음 (P1001 오류 방지)
-cmd = "npx prisma db push --accept-data-loss && npx prisma db seed && npm start"
+cmd = "npx prisma migrate deploy && npm start"
