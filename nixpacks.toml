@@ -13,6 +13,6 @@ cmds = [
 # migrate deploy는 빌드 단계에서 실행되면 안 됨 (P1001 오류 발생)
 # migrate는 런타임 start 명령에서만 실행됨 (Railway Start Command 설정)
 
-# 41.1
+# 15.3
 [start]
-cmd = "npx prisma migrate deploy && npm start"
+cmd = "npm start"
