@@ -12,11 +12,13 @@
     "start": "next start",
     "lint": "eslint",
     "cron:local": "node scripts/local-cron.js",
+    "postinstall": "prisma generate",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:push": "prisma db push --accept-data-loss",
     "prisma:reset": "prisma migrate reset",
     "prisma:studio": "prisma studio",
+    "db:migrate": "prisma migrate deploy",
     "db:setup": "prisma generate && prisma db push --accept-data-loss && prisma db seed",
     "clean:next": "rm -rf .next || rmdir /s /q .next 2>nul || true",
     "dev:clean": "npm run clean:next && npm run prisma:generate && npm run dev"
