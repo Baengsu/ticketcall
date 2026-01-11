@@ -15,7 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-// 15.3
+// 20.1
 type SearchParams = Record<string, string | string[] | undefined>;
 
 function rangeToFrom(range: string) {
@@ -26,7 +26,7 @@ function rangeToFrom(range: string) {
   return null; // all
 }
 
-export default async function VoteStatsPage({
+export default async function Page({
   searchParams,
 }: {
   searchParams?: Promise<SearchParams>;

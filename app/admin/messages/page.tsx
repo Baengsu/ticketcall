@@ -5,7 +5,7 @@ import prisma from "@/lib/prisma";
 import { redirect } from "next/navigation";
 
 interface PageProps {
-  searchParams: Promise<{
+  searchParams?: Promise<{
     senderId?: string;
     receiverId?: string;
     startDate?: string;
@@ -22,7 +22,7 @@ export default async function AdminMessagesPage({ searchParams }: PageProps) {
     redirect("/");
   }
 
-  const params = await searchParams;
+  const params = (await searchParams) ?? {};
   const senderId = params.senderId;
   const receiverId = params.receiverId;
   const startDate = params.startDate;

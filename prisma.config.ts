@@ -1,26 +1,36 @@
-// Prisma 7+ seed configuration
-// This replaces the "prisma.seed" field in package.json
-// 
-// IMPORTANT: Prisma CLI skips automatic env loading when prisma.config.ts is detected.
-// We must explicitly load .env here for local/dev/CI environments.
-// 
-// Load order: .env.local (local dev) -> .env (fallback) -> process.env (production)
-// This ensures local development uses .env.local, while production uses Railway env vars.
+// 19.1
+// C:\ticketcall\prisma.config.ts
+
 import dotenv from "dotenv";
+import fs from "fs";
 import { resolve } from "path";
-import { defineConfig, env } from "prisma/config";
+import { defineConfig } from "prisma/config";
 
-// Explicitly load .env files
-// Load .env.local first (local development, Next.js convention)
-// Then load .env as fallback (if .env.local doesn't exist)
-// Production (Railway) will use process.env directly
-const envLocalPath = resolve(process.cwd(), ".env.local");
-const envPath = resolve(process.cwd(), ".env");
+// Heuristics: treat as "production/railway" if these exist
+const isRailway =
+  !!process.env.RAILWAY_ENVIRONMENT ||
+  !!process.env.RAILWAY_PROJECT_ID ||
+  !!process.env.RAILWAY_SERVICE_ID ||
+  (process.env.DATABASE_URL?.includes("railway") ?? false);
 
-if (require("fs").existsSync(envLocalPath)) {
-  dotenv.config({ path: envLocalPath, override: true });
-} else if (require("fs").existsSync(envPath)) {
-  dotenv.config({ path: envPath, override: false });
+// Only load local env files when DATABASE_URL is missing AND we're not on Railway
+if (!process.env.DATABASE_URL && !isRailway) {
+  const envLocalPath = resolve(process.cwd(), ".env.local");
+  const envPath = resolve(process.cwd(), ".env");
+
+  if (fs.existsSync(envLocalPath)) {
+    dotenv.config({ path: envLocalPath, override: false });
+  } else if (fs.existsSync(envPath)) {
+    dotenv.config({ path: envPath, override: false });
+  }
+}
+
+// Hard fail if still missing (prevents silent localhost fallbacks)
+if (!process.env.DATABASE_URL) {
+  throw new Error(
+    "DATABASE_URL is missing. Refusing to run Prisma with a fallback value. " +
+      "Set DATABASE_URL in the environment (Railway Variables) or provide .env(.local) locally."
+  );
 }
 
 export default defineConfig({
@@ -29,9 +39,8 @@ export default defineConfig({
     path: "prisma/migrations",
     seed: "tsx prisma/seed.ts",
   },
+  // IMPORTANT: use process.env directly (avoid prisma/config env() weirdness)
   datasource: {
-    // env("DATABASE_URL") reads from process.env, which is populated by dotenv/config above
-    // This works both locally (.env file) and on Railway (environment variables)
-    url: env("DATABASE_URL"),
+    url: process.env.DATABASE_URL,
   },
 });

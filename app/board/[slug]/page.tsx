@@ -20,7 +20,7 @@ interface PageProps {
   params: Promise<{
     slug: string;
   }>;
-  searchParams: Promise<{
+  searchParams?: Promise<{
     error?: string;
     sort?: string | string[];
   }>;
@@ -53,7 +53,7 @@ type PostWithMeta = Prisma.PostGetPayload<{
 
 export default async function BoardPage({ params, searchParams }: PageProps) {
   const { slug } = await params;
-  const searchParamsResolved = await searchParams;
+  const searchParamsResolved = (await searchParams) ?? {};
   const { error } = searchParamsResolved;
   
   const sortRaw = searchParamsResolved?.sort;

@@ -8,16 +8,16 @@
 
 */
 -- DropIndex
-DROP INDEX "CommentVote_commentId_idx";
+DROP INDEX IF EXISTS "CommentVote_commentId_idx";
 
 -- DropIndex
-DROP INDEX "CommentVote_userId_idx";
+DROP INDEX IF EXISTS "CommentVote_userId_idx";
 
 -- DropIndex
-DROP INDEX "PostVote_postId_idx";
+DROP INDEX IF EXISTS "PostVote_postId_idx";
 
 -- DropIndex
-DROP INDEX "PostVote_userId_idx";
+DROP INDEX IF EXISTS "PostVote_userId_idx";
 
 -- AlterTable
 ALTER TABLE "CommentVote" DROP CONSTRAINT "CommentVote_pkey",
