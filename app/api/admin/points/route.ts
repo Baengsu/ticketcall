@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (!Number.isFinite(amount) || amount === 0) {
+    if (amount === undefined || !Number.isFinite(amount) || amount === 0) {
       return NextResponse.json(
         { ok: false, message: "0이 아닌 유효한 amount가 필요합니다." },
         { status: 400 }
@@ -53,6 +53,9 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
+
+    // TypeScript 타입 가드: amount는 이제 number임이 보장됨
+    const amountNumber: number = amount;
 
     // 4. 사용자 존재 확인 및 현재 포인트 조회
     const targetUser = await prisma.user.findUnique({
@@ -76,7 +79,7 @@ export async function POST(req: NextRequest) {
 
     // 5. 포인트 조정 및 로그 기록 (트랜잭션)
     // addPointsInTransaction 사용하여 포인트 추가
-    let newPoints: number;
+    let newPoints: number = oldPoints;
     await prisma.$transaction(async (tx) => {
       // 포인트 추가 (PointHistory 생성 및 User.points 업데이트)
       // PointHistory의 reason은 정확히 "ADMIN_ADJUST"로 설정
@@ -84,7 +87,7 @@ export async function POST(req: NextRequest) {
       newPoints = await addPointsInTransaction(
         tx,
         userId,
-        amount,
+        amountNumber,
         "ADMIN_ADJUST",
         null
       );

@@ -15,6 +15,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+// 31.1
+type SearchParams = Record<string, string | string[] | undefined>;
+
 function rangeToFrom(range: string) {
   const now = new Date();
   if (range === "24h") return new Date(now.getTime() - 24 * 60 * 60 * 1000);
@@ -26,10 +29,12 @@ function rangeToFrom(range: string) {
 export default async function VoteStatsPage({
   searchParams,
 }: {
-  searchParams: { [key: string]: string | string[] | undefined };
+  searchParams: Promise<SearchParams>;
 }) {
+  const sp = await searchParams;
+
   const session = await getServerSession(authOptions);
-  const userId = Number((session as any)?.user?.id) || 0;
+  const userId = String((session as any)?.user?.id || "");
 
   if (!userId) redirect("/auth/login");
 
@@ -37,7 +42,7 @@ export default async function VoteStatsPage({
   const isAdmin = !!(me?.isAdmin || me?.role === "ADMIN");
   if (!isAdmin) redirect("/");
 
-  const rangeRaw = searchParams?.range;
+  const rangeRaw = sp?.range;
   const range = (Array.isArray(rangeRaw) ? rangeRaw[0] : rangeRaw) || "7d";
   const from = rangeToFrom(range);
 

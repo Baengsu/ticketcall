@@ -8,6 +8,7 @@ import { getNicknameStyleFromPoints } from "@/lib/points";
 import { getUserAchievements } from "@/lib/achievements";
 import AchievementsList from "@/components/achievements/achievements-list";
 import { getLevel, getLevelProgress } from "@/lib/level";
+import NicknameIcon from "@/components/icons/NicknameIcon";
 
 const SUGGEST_SLUG = "free";
 const DONE_PREFIX = "[완료] ";

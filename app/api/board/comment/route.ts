@@ -171,9 +171,6 @@ export async function POST(req: NextRequest) {
       postId: post.id,
       authorId: currentUserId,
     },
-    include: {
-      author: true,
-    },
     select: {
       id: true,
       content: true,

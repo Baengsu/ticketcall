@@ -19,7 +19,7 @@ export async function GET(req: Request) {
 
   const { limit } = parsed.data;
 
-  const items = await prisma.adminAuditLog.findMany({
+  const items = await prisma.adminActionLog.findMany({
     orderBy: { createdAt: "desc" },
     take: limit,
     include: { actor: { select: { id: true, username: true, nickname: true, role: true } } } as any,
