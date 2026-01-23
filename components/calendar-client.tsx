@@ -312,7 +312,37 @@ function truncate(str: string, max: number): string {
   return str.slice(0, max - 1) + "…";
 }
 
-function getSiteIcon(siteId: string): string | null {
+function getKboTeamIcon(title: string): string | null {
+  // 제목 형식: [지역] A vs B
+  // 홈팀은 vs 뒤의 팀명 (B)
+  const vsMatch = title.match(/vs\s+([^\s]+)/);
+  if (!vsMatch) return null;
+  
+  const homeTeam = vsMatch[1].trim();
+  
+  // 팀명 매핑
+  const teamIconMap: Record<string, string> = {
+    "LG": "/lg.svg",
+    "SSG": "/ssg.svg",
+    "삼성": "/samsung.svg",
+    "NC": "/nc.svg",
+    "한화": "/hanhwa.svg",
+    "KT": "/kt.svg",
+    "롯데": "/lotte.svg",
+    "두산": "/doosan.svg",
+    "키움": "/ki.svg",
+    "KIA": "/kia.svg",
+  };
+  
+  return teamIconMap[homeTeam] || null;
+}
+
+function getSiteIcon(siteId: string, title?: string): string | null {
+  // KBO의 경우 홈팀 아이콘 사용
+  if (siteId === "kbo" && title) {
+    return getKboTeamIcon(title);
+  }
+  
   switch (siteId) {
     case "yes":
       return "/yes.ico";
@@ -324,6 +354,8 @@ function getSiteIcon(siteId: string): string | null {
       return "/link.ico";
     case "etc":
       return "/etc.ico"; // 있으면 사용, 없으면 만들어도 좋고
+    case "kbo":
+      return "/kbo.ico"; // fallback: title이 없을 경우
     default:
       return null;
   }
@@ -335,7 +367,7 @@ function EventPopover({ ev, isFavorite: isFavoriteProp, onFavoriteChange }: { ev
   const shortTitle = truncate(ev.title, 20);
   const hasView = typeof ev.viewCount === "number";
   const isHot = hasView && (ev.viewCount ?? 0) >= 10000;
-  const iconSrc = getSiteIcon(ev.siteId);
+  const iconSrc = getSiteIcon(ev.siteId, ev.title);
   const { data: session } = useSession();
   const [isFavorite, setIsFavorite] = useState(isFavoriteProp || false);
   const [loading, setLoading] = useState(false);
@@ -450,6 +482,35 @@ function EventPopover({ ev, isFavorite: isFavoriteProp, onFavoriteChange }: { ev
             {formatDateTimeLabel(ev.openAt)}
           </span>
         </div>
+        {/* KBO 전용 필드 */}
+        {ev.siteId === "kbo" && (
+          <>
+            {ev.gameAtLabel && (
+              <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
+                <span className="font-medium">경기일시:</span>
+                <span className="font-semibold text-foreground">
+                  {ev.gameAtLabel}
+                </span>
+              </div>
+            )}
+            {ev.openType && (
+              <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
+                <span className="font-medium">예매 타입:</span>
+                <span className="font-semibold text-foreground">
+                  {ev.openType}
+                </span>
+              </div>
+            )}
+            {ev.notes && (
+              <div className="text-xs sm:text-sm text-muted-foreground">
+                <span className="font-medium block mb-1">메모:</span>
+                <div className="font-normal text-foreground whitespace-pre-wrap break-words bg-muted/50 dark:bg-muted/30 p-2 rounded-md">
+                  {ev.notes}
+                </div>
+              </div>
+            )}
+          </>
+        )}
         {hasView && (
           <div
             className={

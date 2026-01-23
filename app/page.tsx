@@ -4,6 +4,8 @@ import type { MergedData } from "@/lib/types";
 import CalendarClient from "@/components/calendar-client";
 import FavoritesList from "@/components/favorites-list";
 import prisma from "@/lib/prisma";
+import { readFile } from "fs/promises";
+import { join } from "path";
 
 export const dynamic = "force-dynamic";
 
@@ -15,11 +17,31 @@ export type EventItem = {
   openAt: string; // 예매 오픈 시간 (YYYY-MM-DDTHH:mm)
   viewCount?: number;
   detailUrl?: string;
+  // KBO 전용 필드
+  gameAt?: string; // 경기 시작 시간 (YYYY-MM-DDTHH:mm)
+  gameAtLabel?: string; // 경기 시작 시간 표시 레이블 (YYYY-MM-DD HH:mm:ss)
+  openType?: string; // 예매 타입 (일반예매, 선예매, 선선예매, ...)
+  notes?: string; // 기타 설명/메모
+};
+
+type KboEvent = {
+  source: string;
+  title: string;
+  openAt?: string;
+  openAtLabel?: string;
+  region?: string;
+  detailUrl?: string;
+  // KBO 전용 선택적 필드
+  showAt?: string; // 경기 시작 시간 (YYYY-MM-DDTHH:mm)
+  showAtLabel?: string; // 경기 시작 시간 표시 레이블 (YYYY-MM-DD HH:mm:ss)
+  openType?: string; // 예매 타입
+  notes?: string; // 기타 설명
+  description?: string; // notes 대체 필드
 };
 
 export default async function Page() {
-  // 🔥 크롤링 데이터 + 직접 추가 일정(DB) + 마지막 리빌드 시간 동시에 로드
-  const [merged, etcEventsRaw, lastRebuildLog] = await Promise.all([
+  // 🔥 크롤링 데이터 + 직접 추가 일정(DB) + KBO 데이터 + 마지막 리빌드 시간 동시에 로드
+  const [merged, etcEventsRaw, kboData, lastRebuildLog] = await Promise.all([
     loadLiveData(),
     prisma.etcEvent.findMany({
       select: {
@@ -31,6 +53,7 @@ export default async function Page() {
       orderBy: { datetime: "asc" },
       take: 100,
     }),
+    loadKboData(),
     prisma.rebuildLog.findFirst({
       where: { status: "success" },
       orderBy: { createdAt: "desc" },
@@ -51,8 +74,25 @@ export default async function Page() {
   detailUrl: e.url ?? undefined,
 }));
 
-  // 3) 둘 다 합치기
-  const events = [...crawlerEvents, ...etcEvents];
+  // 3) KBO 공연들 (2026kbo.json 기반)
+  const kboEvents = buildKboEvents(kboData);
+
+  // 4) 모든 이벤트 합치기
+  const allEvents = [...crawlerEvents, ...etcEvents, ...kboEvents];
+
+  // 5) 중복 제거 (siteId + openAt + title 기준)
+  const eventMap = new Map<string, EventItem>();
+  for (const ev of allEvents) {
+    const key = `${ev.siteId}-${ev.openAt}-${ev.title}`;
+    if (!eventMap.has(key)) {
+      eventMap.set(key, ev);
+    }
+  }
+
+  // 6) 정렬 (openAt 기준 오름차순)
+  const events = Array.from(eventMap.values()).sort((a, b) =>
+    a.openAt.localeCompare(b.openAt)
+  );
 
   // 마지막 리빌드 시간 문자열 (분 단위까지)
   const lastRebuildLabel = lastRebuildLog
@@ -158,6 +198,92 @@ function buildEvents(merged: MergedData): EventItem[] {
   }
 
   events.sort((a, b) => a.openAt.localeCompare(b.openAt));
+  return events;
+}
+
+async function loadKboData(): Promise<KboEvent[]> {
+  try {
+    const filePath = join(process.cwd(), "data", "2026kbo.json");
+    const fileContent = await readFile(filePath, "utf-8");
+    const data = JSON.parse(fileContent) as KboEvent[];
+    return Array.isArray(data) ? data : [];
+  } catch (error) {
+    // 파일이 없거나 잘못된 JSON인 경우 빈 배열 반환
+    console.warn("Failed to load KBO data:", error);
+    return [];
+  }
+}
+
+function buildKboEvents(kboData: KboEvent[]): EventItem[] {
+  const events: EventItem[] = [];
+
+  for (const item of kboData) {
+    const title = String(item.title ?? "").trim();
+    if (!title) continue;
+
+    // openAt 우선, 없으면 openAtLabel에서 변환
+    let openAt: string | undefined = item.openAt;
+    if (!openAt && item.openAtLabel) {
+      // "YYYY-MM-DD HH:mm:ss" -> "YYYY-MM-DDTHH:mm"
+      const normalized = item.openAtLabel
+        .trim()
+        .replace(/\s+/, "T")
+        .replace(/:\d{2}$/, ""); // 초 제거
+      if (normalized.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/)) {
+        openAt = normalized;
+      }
+    }
+
+    if (!openAt) continue;
+
+    // detailUrl 처리 (빈 문자열 -> undefined)
+    const detailUrl =
+      typeof item.detailUrl === "string" && item.detailUrl.trim()
+        ? item.detailUrl.trim()
+        : undefined;
+
+    // gameAt 처리: showAt 우선, 없으면 showAtLabel에서 변환
+    let gameAt: string | undefined = item.showAt;
+    if (!gameAt && item.showAtLabel) {
+      // "YYYY-MM-DD HH:mm:ss" -> "YYYY-MM-DDTHH:mm"
+      const normalized = item.showAtLabel
+        .trim()
+        .replace(/\s+/, "T")
+        .replace(/:\d{2}$/, ""); // 초 제거
+      if (normalized.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/)) {
+        gameAt = normalized;
+      }
+    }
+
+    // gameAtLabel: showAtLabel 사용
+    const gameAtLabel = item.showAtLabel?.trim() || undefined;
+
+    // openType 처리
+    const openType = item.openType?.trim() || undefined;
+
+    // notes 처리: notes 우선, 없으면 description 사용
+    const notes = (item.notes?.trim() || item.description?.trim() || undefined);
+
+    // 안정적이고 고유한 ID 생성 (공백 제거)
+    const sanitizedTitle = title.replace(/\s+/g, "-");
+    const sanitizedOpenAt = openAt.replace(/[:T-]/g, "");
+    const id = `kbo-${sanitizedOpenAt}-${sanitizedTitle}`;
+
+    events.push({
+      id,
+      siteId: "kbo",
+      siteName: "KBO",
+      title,
+      openAt,
+      viewCount: undefined,
+      detailUrl,
+      gameAt,
+      gameAtLabel,
+      openType,
+      notes,
+    });
+  }
+
   return events;
 }
 
